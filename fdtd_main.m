@@ -12,11 +12,11 @@ clear
     sigma = [0 60e6 0];
     sigma_m = [0 0 0];
     
-    epsilon_0 = 1;
+    epsilon_0 = 8.8542e-12;
     epsilon_r = [1 60e6 3];
     epsilon = epsilon_0*epsilon_r;
     
-    mu_0 = 1;
+    mu_0 = 1.2566e-6;
     mu_r = [1 1 1];
     mu = mu_0*mu_r;
 
@@ -25,7 +25,7 @@ clear
     N_y = N_x;
     N_z = N_x;
     
-    delta_x = 0.1;
+    delta_x = 3e-3;
     %delta_y = delta_x;
     %delta_z = delta_x;
 
@@ -107,17 +107,15 @@ while stop_cond == false
         return
     end
     
-%     Ex_old(source_x,source_y,source_z) = 0;
-%     Ey_old(source_x,source_y,source_z) = 0;
-%     Ez_old(source_x,source_y,source_z) = source_signal(step+1);
     Jsource_z(source_x,source_y,source_z) = source_signal(step+1);
-    if step >= 0
-        temp = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
-        plot_field(temp,N_x,N_y,N_z,step);
-        
-        temp = temp(1:N_x,N_y/2,N_z/2);
-        plot_line(temp,delta_x*(1:N_x),step);
 
+    if (step == 50) || (step == 100) || (step == 150)
+        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
+        plot_field(H_tot,N_x,N_y,N_z,step);
+        
+        H_tot_line = H_tot(1:N_x,N_y/2,N_z/2);
+        plot_line(H_tot_line,delta_x*(1:N_x),step);
+        tempvar = 0;
     end
     
     
@@ -305,7 +303,7 @@ function plot_field(field,N_x,N_y,N_z,step)
         
     grid on   
 
-    clim([0 0.25e-3]);
+    clim([0 0.05e-3]);
 %     view([1 0 0])
 end
 
