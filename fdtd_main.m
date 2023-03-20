@@ -106,37 +106,38 @@ while stop_cond == false
         fprintf('Simulation unstable')
         return
     end
-    
+    Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
+    Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
     Jsource_z(source_x,source_y,source_z) = source_signal(step+1);
 
-    if (step == 50) || (step == 100) || (step == 150)
-        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
-        plot_field(H_tot,N_x,N_y,N_z,step);
+    if step==190
+        E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
+        plot_field(E_tot,N_x,N_y,N_z,step);
         
-        H_tot_line = H_tot(1:N_x,N_y/2,N_z/2);
-        plot_line(H_tot_line,delta_x*(1:N_x),step);
+        E_tot_line = diag(E_tot(:,:,N_z/2));
+        plot_line(E_tot_line,delta_x*(1:N_x),step);
         tempvar = 0;
     end
     
     
     % H-field calculate
-    ii = 1:N_x;
-    jj = 1:N_y-1;
-    kk = 1:N_z-1;
+    ii = 2:N_x-1;
+    jj = 2:N_y-1;
+    kk = 2:N_z-1;
     Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
         + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk));
 
-    ii = 1:N_x-1;
-    jj = 1:N_y;
-    kk = 1:N_z-1;
+    ii = 2:N_x-1;
+    jj = 2:N_y-1;
+    kk = 2:N_z-1;
     Hy_new(ii,jj,kk) = D_a(ii,jj,kk).*Hy_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ez_old(ii+1,jj,kk)-Ez_old(ii,jj,kk) ...
         + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1));
 
-    ii = 1:N_x-1;
-    jj = 1:N_y-1;
-    kk = 1:N_z;
+    ii = 2:N_x-1;
+    jj = 2:N_y-1;
+    kk = 2:N_z-1;
     Hz_new(ii,jj,kk) = D_a(ii,jj,kk).*Hz_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
         + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk));
@@ -148,25 +149,25 @@ while stop_cond == false
     Hz_old = Hz_new;
 
     % E-field calculate
-    ii = 1:N_x;
-    jj = 2:N_y;
-    kk = 2:N_z;
+    ii = 3:N_x-2;
+    jj = 3:N_y-2;
+    kk = 3:N_z-2;
     Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
         + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk) ...
         + Jsource_x(ii,jj,kk).*delta_x);
 
-    ii = 2:N_x;
-    jj = 1:N_y;
-    kk = 2:N_z;
+    ii = 3:N_x-2;
+    jj = 3:N_y-2;
+    kk = 3:N_z-2;
     Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
         + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk) ...
         + Jsource_y(ii,jj,kk).*delta_x);
 
-    ii = 2:N_x;
-    jj = 2:N_y;
-    kk = 1:N_z;
+    ii = 3:N_x-2;
+    jj = 3:N_y-2;
+    kk = 3:N_z-2;
     Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
         + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
@@ -177,30 +178,36 @@ while stop_cond == false
      jj = 2:N_y-1;
      kk = 2:N_z-1;
      c_ = max(c);   
-
-     Ex_new(ii,1,kk) = mur_abc('y', c_, delta_t, delta_x, 1, 2, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,N_y,kk) = mur_abc('y', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,jj,1) = mur_abc('z', c_, delta_t, delta_x, 1, 2, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,jj,N_z) = mur_abc('z', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, Ex_new, Ex_old, Ex_old_old);
-         
-     Ey_new(1,ii,jj) = mur_abc('x', c_, delta_t, delta_x, 1, 2, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(N_x,ii,jj) = mur_abc('x', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(ii,jj,1) = mur_abc('z', c_, delta_t, delta_x, 1, 2, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(ii,jj,N_z) = mur_abc('z', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, Ey_new, Ey_old, Ey_old_old);
     
-     
-     Ez_new(1,ii,jj) = mur_abc('x', c_, delta_t, delta_x, 1, 2, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(N_x,ii,jj) = mur_abc('x', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(ii,1,kk) = mur_abc('y', c_, delta_t, delta_x, 1, 2, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(ii,N_y,kk) = mur_abc('y', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     
+     Ex_new(2,jj,kk) = mur_abc('x', c_, delta_t, delta_x, 2, 3, jj, kk, Ex_new, Ex_old, Ex_old_old);
+     Ex_new(N_x-1,jj,kk) = mur_abc('x', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ex_new, Ex_old, Ex_old_old);
+     Ex_new(ii,2,kk) = mur_abc('y', c_, delta_t, delta_x, 2, 3, jj, kk, Ex_new, Ex_old, Ex_old_old);
+     Ex_new(ii,N_y-1,kk) = mur_abc('y', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ex_new, Ex_old, Ex_old_old);
+     Ex_new(ii,jj,2) = mur_abc('z', c_, delta_t, delta_x, 2, 3, jj, kk, Ex_new, Ex_old, Ex_old_old);
+     Ex_new(ii,jj,N_z-1) = mur_abc('z', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ex_new, Ex_old, Ex_old_old);
+         
+     Ey_new(2,ii,jj) = mur_abc('x', c_, delta_t, delta_x, 2, 3, jj, kk, Ey_new, Ey_old, Ey_old_old);
+     Ey_new(N_x-1,ii,jj) = mur_abc('x', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ey_new, Ey_old, Ey_old_old);
+     Ey_new(ii,2,kk) = mur_abc('y', c_, delta_t, delta_x, 2, 3, jj, kk, Ey_new, Ey_old, Ey_old_old);
+     Ey_new(ii,N_y-1,jj) = mur_abc('y', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ey_new, Ey_old, Ey_old_old);
+     Ey_new(ii,jj,2) = mur_abc('z', c_, delta_t, delta_x, 2, 3, jj, kk, Ey_new, Ey_old, Ey_old_old);
+     Ey_new(ii,jj,N_z-1) = mur_abc('z', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ey_new, Ey_old, Ey_old_old);
+    
+     Ez_new(2,ii,jj) = mur_abc('x', c_, delta_t, delta_x, 2, 3, jj, kk, Ez_new, Ez_old, Ez_old_old);
+     Ez_new(N_x-1,ii,jj) = mur_abc('x', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ez_new, Ez_old, Ez_old_old);
+     Ez_new(ii,2,kk) = mur_abc('y', c_, delta_t, delta_x, 2, 3, jj, kk, Ez_new, Ez_old, Ez_old_old);
+     Ez_new(ii,N_y-1,kk) = mur_abc('y', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ez_new, Ez_old, Ez_old_old);
+     Ez_new(ii,jj,2) = mur_abc('z', c_, delta_t, delta_x, 2, 3, jj, kk, Ez_new, Ez_old, Ez_old_old);
+     Ez_new(ii,jj,N_z-1) = mur_abc('z', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ez_new, Ez_old, Ez_old_old);
+
 %       mur_abc('x', c_, delta_t, delta_x, 1, 2, jj, kk, W_new, W_old, W_old_old);
 %       mur_abc('x', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, W_new, W_old, W_old_old);
 
+    Ex_new = assist_mur_abc_corner(c_, delta_t, delta_x, N_x, N_y, N_z, pi/4, Ex_new, Ex_old);
+    Ey_new = assist_mur_abc_corner(c_, delta_t, delta_x, N_x, N_y, N_z, pi/4, Ey_new, Ey_old);
+    Ez_new = assist_mur_abc_corner(c_, delta_t, delta_x, N_x, N_y, N_z, pi/4, Ez_new, Ez_old);
 
-    Ex_new([1,N_x],[1,N_y],[1,N_z]) = 0;
-    Ey_new([1,N_x],[1,N_y],[1,N_z]) = 0;
-    Ez_new([1,N_x],[1,N_y],[1,N_z]) = 0;
+    
 
     % E-field increment
     Ex_old_old = Ex_old;
@@ -211,7 +218,6 @@ while stop_cond == false
     Ey_old = Ey_new;
     Ez_old = Ez_new;
   
-
     step = step+1;
     if step >= N_t_max
         stop_cond = true;
@@ -254,6 +260,33 @@ function Wz_new_ = mur_abc(boundary,c, delta_t, delta_x, i0, i1, jj, kk, W_new, 
     end
 end
 
+function W_new_ = assist_mur_abc_corner(c, delta_t, delta_x, N_x, N_y, N_z, a, W_new, W_old)
+    W_new_ = W_new;
+    W_new_(2, 2, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        2, 2, 2, 3, 3, 3, W_new, W_old);
+    W_new_(N_x-1, 2, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        N_x-1, 2, 2, N_x-2, 3, 3, W_new, W_old);
+    W_new_(N_x-1, N_y-1, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        N_x-1, N_y-1, 2, N_x-2, N_y-2, 3, W_new, W_old);
+    W_new_(2, N_y-1, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        2, N_y-1, 2, 3, N_y-2, 3, W_new, W_old);
+
+    W_new_(2, 2, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        2, 2, N_z-1, 3, 3, N_z-2, W_new, W_old);
+    W_new_(N_x-1, 2, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        N_x-1, 2, N_z-1, N_x-2, 3, N_z-2, W_new, W_old);
+    W_new_(N_x-1, N_y-1, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        N_x-1, N_y-1, N_z-1, N_x-2, N_y-2, N_z-2, W_new, W_old);
+    W_new_(2, N_y-1, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
+        2, N_y-1, N_z-1, 3, N_y-2, N_z-2, W_new, W_old);
+end
+
+function W_new_ = mur_abc_corner(c, delta_t, delta_x, a, ii_0, jj_0, kk_0, ii_1, jj_1, kk_1, W_new, W_old)
+W_new_ = W_old(ii_1,jj_1,kk_1) ...
+        + (c*delta_t*cos(a)-delta_x)/(c*delta_t*cos(a)+delta_x) ...
+        *(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
+
+end
 
 function plot_line(field1,index,step)
     figure(2)
@@ -266,25 +299,37 @@ function plot_line(field1,index,step)
     ylabel('|H_{tot}| (A/m)');
     xlabel('x (m)');
     grid on   
-    ylim([0 1e-3]);
+     ylim([0 0.02]);
 end
 
-function plot_field_slice(field)
+function plot_field_slice(field,step)
     
     figure(1)
     colormap jet
     h = surf(field);
+
+%     view([0 0 1])
     set(h,'edgecolor','none')
+
+    name = sprintf('n = %d',step);
+    title(name);
+    xlabel('x');
+    ylabel('y');
+   
 %     set(gca,'ColorScale','log')
-    view([0 0 1])
-    colorbar();
-    clim([-0.01 0.01]);
+
+    bar = colorbar();
+    ylabel(bar,'|H_{tot}| (A/m)');
+        
+    grid on   
+    zlim([0 0.05]);
+    clim([0 0.006]);
 end
 
 function plot_field(field,N_x,N_y,N_z,step)
     
     figure(1)
-    colormap gray
+    colormap jet
     xslice = N_x/2;   
     yslice = N_y/2;
     zslice = N_z/2;
@@ -303,7 +348,7 @@ function plot_field(field,N_x,N_y,N_z,step)
         
     grid on   
 
-    clim([0 0.05e-3]);
+    clim([0 0.006]);
 %     view([1 0 0])
 end
 
