@@ -1,7 +1,7 @@
 %
 %  3D-FDTD
 %  K Meyer
-%  2023-02-15
+%  2023-03-21
 % 
 
 clear
@@ -21,7 +21,7 @@ clear
     mu = mu_0*mu_r;
 
 % Grid and cell size
-    N_x = 100;
+    N_x = 50;
     N_y = N_x;
     N_z = N_x;
     
@@ -37,6 +37,10 @@ clear
 
 % Simulation instability max value
     e_field_max = 1e6;
+
+% Space around E-field
+    offset = 3;
+    
 %====================SIMULATION SETUP END=====================%
 
 c = 1./sqrt(epsilon.*mu);
@@ -106,11 +110,13 @@ while stop_cond == false
         fprintf('Simulation unstable')
         return
     end
-    Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
-    Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
-    Jsource_z(source_x,source_y,source_z) = source_signal(step+1);
+%     Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
+%     Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
+    Ex_old(source_x,source_y,source_z) = source_signal(step+1);
+    Ey_old(source_x,source_y,source_z) = source_signal(step+1);
+    Ez_old(source_x,source_y,source_z) = source_signal(step+1);
 
-    if step==190
+    if step>0
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
         plot_field(E_tot,N_x,N_y,N_z,step);
         
@@ -173,41 +179,23 @@ while stop_cond == false
         + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
         + Jsource_z(ii,jj,kk).*delta_x);
 
-     % E-field Boundary Condition
-     ii = 2:N_x-1;
-     jj = 2:N_y-1;
-     kk = 2:N_z-1;
-     c_ = max(c);   
+    % E-field Boundary ConditionsW_old
+    c_ = max(c);   
     
-     Ex_new(2,jj,kk) = mur_abc('x', c_, delta_t, delta_x, 2, 3, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(N_x-1,jj,kk) = mur_abc('x', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,2,kk) = mur_abc('y', c_, delta_t, delta_x, 2, 3, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,N_y-1,kk) = mur_abc('y', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,jj,2) = mur_abc('z', c_, delta_t, delta_x, 2, 3, jj, kk, Ex_new, Ex_old, Ex_old_old);
-     Ex_new(ii,jj,N_z-1) = mur_abc('z', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ex_new, Ex_old, Ex_old_old);
-         
-     Ey_new(2,ii,jj) = mur_abc('x', c_, delta_t, delta_x, 2, 3, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(N_x-1,ii,jj) = mur_abc('x', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(ii,2,kk) = mur_abc('y', c_, delta_t, delta_x, 2, 3, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(ii,N_y-1,jj) = mur_abc('y', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(ii,jj,2) = mur_abc('z', c_, delta_t, delta_x, 2, 3, jj, kk, Ey_new, Ey_old, Ey_old_old);
-     Ey_new(ii,jj,N_z-1) = mur_abc('z', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ey_new, Ey_old, Ey_old_old);
+    %planes
+    Ex_new = assist_mur_abc_plane(c_, delta_t, delta_x, N_x, N_y, N_z, offset, Ex_new, Ex_old, Ex_old_old);
+    Ey_new = assist_mur_abc_plane(c_, delta_t, delta_x, N_x, N_y, N_z, offset, Ey_new, Ey_old, Ey_old_old);
+    Ez_new = assist_mur_abc_plane(c_, delta_t, delta_x, N_x, N_y, N_z, offset, Ez_new, Ez_old, Ez_old_old);
     
-     Ez_new(2,ii,jj) = mur_abc('x', c_, delta_t, delta_x, 2, 3, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(N_x-1,ii,jj) = mur_abc('x', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(ii,2,kk) = mur_abc('y', c_, delta_t, delta_x, 2, 3, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(ii,N_y-1,kk) = mur_abc('y', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(ii,jj,2) = mur_abc('z', c_, delta_t, delta_x, 2, 3, jj, kk, Ez_new, Ez_old, Ez_old_old);
-     Ez_new(ii,jj,N_z-1) = mur_abc('z', c_, delta_t, delta_x, N_x-1, N_x-2, jj, kk, Ez_new, Ez_old, Ez_old_old);
+    %lines
+    Ex_new = assist_mur_abc_line(c_, delta_t, delta_x, N_x, N_y, N_z, offset, pi/4, Ex_new, Ex_old);
+    Ey_new = assist_mur_abc_line(c_, delta_t, delta_x, N_x, N_y, N_z, offset, pi/4, Ey_new, Ey_old);
+    Ez_new = assist_mur_abc_line(c_, delta_t, delta_x, N_x, N_y, N_z, offset, pi/4, Ez_new, Ez_old);
 
-%       mur_abc('x', c_, delta_t, delta_x, 1, 2, jj, kk, W_new, W_old, W_old_old);
-%       mur_abc('x', c_, delta_t, delta_x, N_x, N_x-1, jj, kk, W_new, W_old, W_old_old);
-
-    Ex_new = assist_mur_abc_corner(c_, delta_t, delta_x, N_x, N_y, N_z, pi/4, Ex_new, Ex_old);
-    Ey_new = assist_mur_abc_corner(c_, delta_t, delta_x, N_x, N_y, N_z, pi/4, Ey_new, Ey_old);
-    Ez_new = assist_mur_abc_corner(c_, delta_t, delta_x, N_x, N_y, N_z, pi/4, Ez_new, Ez_old);
-
-    
+    %points
+%     Ex_new = assist_mur_abc_point(c_, delta_t, delta_x, N_x, N_y, N_z, offset, pi/4, Ex_new, Ex_old);
+%     Ey_new = assist_mur_abc_point(c_, delta_t, delta_x, N_x, N_y, N_z, offset, pi/4, Ey_new, Ey_old);
+%     Ez_new = assist_mur_abc_point(c_, delta_t, delta_x, N_x, N_y, N_z, offset, pi/4, Ez_new, Ez_old);
 
     % E-field increment
     Ex_old_old = Ex_old;
@@ -225,18 +213,43 @@ while stop_cond == false
 end
 fprintf('simulation end\n');
 
-function Wz_new_ = mur_abc(boundary,c, delta_t, delta_x, i0, i1, jj, kk, W_new, W_old, W_old_old)
+function W_new_ = assist_mur_abc_plane(c_, delta_t, delta_x, N_x, N_y, N_z, offset, W_new, W_old, W_old_old)
+    
+    n_offset = offset-1;
+
+    ii = offset+1:N_x-n_offset-1;
+    jj = offset+1:N_y-n_offset-1;
+    kk = offset+1:N_z-n_offset-1;
+
+    W_new_ = W_new;
+
+    W_new_(offset,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
+        offset, offset+1, jj, kk, W_new, W_old, W_old_old);
+    W_new_(N_x-n_offset,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
+        N_x-n_offset, N_x-n_offset-1, jj, kk, W_new, W_old, W_old_old);
+    W_new_(ii,offset,kk) = mur_abc_plane('y', c_, delta_t, delta_x, ...
+        offset, offset+1, jj, kk, W_new, W_old, W_old_old);
+    W_new_(ii,N_y-n_offset,kk) = mur_abc_plane('y', c_, delta_t, delta_x, ...
+        N_x-n_offset, N_x-n_offset-1, jj, kk, W_new, W_old, W_old_old);
+    W_new_(ii,jj,offset) = mur_abc_plane('z', c_, delta_t, delta_x, ...
+        offset, offset+1, jj, kk, W_new, W_old, W_old_old);
+    W_new_(ii,jj,N_z-n_offset) = mur_abc_plane('z', c_, delta_t, delta_x, ...
+        N_x-n_offset, N_x-n_offset-1, jj, kk, W_new, W_old, W_old_old);
+
+end
+
+function Wz_new_ = mur_abc_plane(boundary, c, delta_t, delta_x, i0, i1, jj, kk, W_new, W_old, W_old_old)
     
     if boundary == 'x'
         %default
     elseif boundary == 'y'
-        permute(W_new,[2 1 3]);
-        permute(W_old,[2 1 3]);
-        permute(W_old_old,[2 1 3]);
+        W_new = permute(W_new,[2 1 3]);
+        W_old = permute(W_old,[2 1 3]);
+        W_old_old = permute(W_old_old,[2 1 3]);
     elseif boundary == 'z'
-        permute(W_new,[3 2 1]);
-        permute(W_old,[3 2 1]);
-        permute(W_old_old,[3 2 1]);
+        W_new = permute(W_new,[3 2 1]);
+        W_old = permute(W_old,[3 2 1]);
+        W_old_old = permute(W_old_old,[3 2 1]);
     end
     
     coeffs = [-1 ...
@@ -254,34 +267,83 @@ function Wz_new_ = mur_abc(boundary,c, delta_t, delta_x, i0, i1, jj, kk, W_new, 
     if boundary == 'x'
         %default
     elseif boundary == 'y'
-        permute(Wz_new_,[2 1 3]);       
+        Wz_new_ = permute(Wz_new_,[2 1 3]);       
     elseif boundary == 'z'
-        permute(Wz_new_,[3 2 1]);
+        Wz_new_ = permute(Wz_new_,[3 2 1]);
     end
 end
 
-function W_new_ = assist_mur_abc_corner(c, delta_t, delta_x, N_x, N_y, N_z, a, W_new, W_old)
+function W_new_ = assist_mur_abc_line(c, delta_t, delta_x, N_x, N_y, N_z, offset, a, W_new, W_old)
+    ofs = offset;
+    nfs = offset-1;
+    iii = ofs:N_x-nfs;
+    jjj = ofs:N_y-nfs;
+    kkk = ofs:N_z-nfs;
+    
     W_new_ = W_new;
-    W_new_(2, 2, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        2, 2, 2, 3, 3, 3, W_new, W_old);
-    W_new_(N_x-1, 2, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        N_x-1, 2, 2, N_x-2, 3, 3, W_new, W_old);
-    W_new_(N_x-1, N_y-1, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        N_x-1, N_y-1, 2, N_x-2, N_y-2, 3, W_new, W_old);
-    W_new_(2, N_y-1, 2) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        2, N_y-1, 2, 3, N_y-2, 3, W_new, W_old);
-
-    W_new_(2, 2, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        2, 2, N_z-1, 3, 3, N_z-2, W_new, W_old);
-    W_new_(N_x-1, 2, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        N_x-1, 2, N_z-1, N_x-2, 3, N_z-2, W_new, W_old);
-    W_new_(N_x-1, N_y-1, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        N_x-1, N_y-1, N_z-1, N_x-2, N_y-2, N_z-2, W_new, W_old);
-    W_new_(2, N_y-1, N_z-1) = mur_abc_corner(c, delta_t, delta_x, a, ...
-        2, N_y-1, N_z-1, 3, N_y-2, N_z-2, W_new, W_old);
+    coords_0 = ...
+        {{iii, ofs, ofs}, ...
+        {iii, N_y-nfs, ofs}, ...
+        {ofs, jjj, ofs}, ...
+        {N_x-nfs, jjj, ofs}, ...
+        ...
+        {ofs, ofs, kkk}, ...
+        {ofs, N_y-nfs, kkk}, ...
+        {N_x-nfs, N_y-nfs, kkk}, ...
+        {N_x-nfs, ofs, kkk}, ...
+        ...
+        {iii, ofs, N_z-nfs}, ...
+        {iii, N_y-nfs, N_z-nfs}, ...
+        {ofs, jjj, N_z-nfs}, ...
+        {N_x-nfs, jjj, N_z-nfs}};
+    
+    coords_1 = coords_0;
+    for ii = 1:length(coords_0)
+        for jj = [1:3]
+            if length(coords_0{ii}) ~= 1
+                coords_1{ii}{jj} = coords_0{ii}{jj};
+            elseif coords_0{ii} == ofs
+                coords_1{ii}{jj} = coords_0{ii}{jj}+1;
+            else
+                coords_1{ii}{jj} = coords_0{ii}{jj}-1;    
+            end  
+        end
+    end
+    
+    for ii = 1:length(coords_0)
+        W_new_(coords_0{ii}{1}, coords_0{ii}{2}, coords_0{ii}{3}) = ...
+            mur_abc_point(c, delta_t, delta_x, a, ...
+            coords_0{ii}{1}, coords_0{ii}{2}, coords_0{ii}{3}, coords_1{ii}{1}, coords_1{ii}{2}, coords_1{ii}{3}, W_new, W_old);
+    end
+    
 end
 
-function W_new_ = mur_abc_corner(c, delta_t, delta_x, a, ii_0, jj_0, kk_0, ii_1, jj_1, kk_1, W_new, W_old)
+function W_new_ = assist_mur_abc_point(c, delta_t, delta_x, N_x, N_y, N_z, offset, a, W_new, W_old)
+    n_offset = offset-1;
+
+    W_new_ = W_new;
+
+    for z_count = [1,2]
+        if (z_count==1)
+            z_off_0 = offset;
+            z_off_1 = offset+1;
+        else
+            z_off_0 = N_z-n_offset;
+            z_off_1 = N_z-n_offset-1;
+        end
+
+        W_new_(offset, offset, z_off_0) = mur_abc_point(c, delta_t, delta_x, a, ...
+            offset, offset, z_off_0, offset+1, offset+1, z_off_1, W_new, W_old);
+        W_new_(N_x-n_offset, offset, z_off_0) = mur_abc_point(c, delta_t, delta_x, a, ...
+            N_x-n_offset, offset, z_off_0, N_x-n_offset-1, offset+1, z_off_1, W_new, W_old);
+        W_new_(N_x-n_offset, N_y-n_offset, z_off_0) = mur_abc_point(c, delta_t, delta_x, a, ...
+            N_x-n_offset, N_y-n_offset, z_off_0, N_x-n_offset-1, N_y-n_offset-1, z_off_1, W_new, W_old);
+        W_new_(offset, N_y-n_offset, z_off_0) = mur_abc_point(c, delta_t, delta_x, a, ...
+            offset, N_y-n_offset, z_off_0, offset+1, N_y-n_offset, z_off_1, W_new, W_old);
+    end
+end
+
+function W_new_ = mur_abc_point(c, delta_t, delta_x, a, ii_0, jj_0, kk_0, ii_1, jj_1, kk_1, W_new, W_old)
 W_new_ = W_old(ii_1,jj_1,kk_1) ...
         + (c*delta_t*cos(a)-delta_x)/(c*delta_t*cos(a)+delta_x) ...
         *(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
@@ -299,13 +361,15 @@ function plot_line(field1,index,step)
     ylabel('|H_{tot}| (A/m)');
     xlabel('x (m)');
     grid on   
-     ylim([0 0.02]);
+     ylim([0 1]);
 end
 
 function plot_field_slice(field,step)
     
     figure(1)
     colormap jet
+    s = size(field);
+    field(s(1)+1,s(2)+1) = 0;
     h = surf(field);
 
 %     view([0 0 1])
@@ -322,8 +386,8 @@ function plot_field_slice(field,step)
     ylabel(bar,'|H_{tot}| (A/m)');
         
     grid on   
-    zlim([0 0.05]);
-    clim([0 0.006]);
+    zlim([0 1]);
+    clim([0 1]);
 end
 
 function plot_field(field,N_x,N_y,N_z,step)
@@ -333,6 +397,9 @@ function plot_field(field,N_x,N_y,N_z,step)
     xslice = N_x/2;   
     yslice = N_y/2;
     zslice = N_z/2;
+    s = size(field);
+    field(s(1)+1,s(2)+1,s(3)+1) = 0;
+
     h = slice(field,xslice,yslice,zslice);
     set(h,'edgecolor','none')
 
@@ -341,6 +408,10 @@ function plot_field(field,N_x,N_y,N_z,step)
     xlabel('x');
     ylabel('y');
     zlabel('z');
+    xlim([0 N_x+1])
+    ylim([0 N_x+1])
+    zlim([0 N_x+1])
+
 %     set(gca,'ColorScale','log')
 
     bar = colorbar();
@@ -348,40 +419,6 @@ function plot_field(field,N_x,N_y,N_z,step)
         
     grid on   
 
-    clim([0 0.006]);
+    clim([0 0.05]);
 %     view([1 0 0])
-end
-
-function plot_fields(field1,field2,field3,N_x,N_y,N_z,fig_no)
-    
-    figure(fig_no)
-    subplot(3,1,1);
-    colormap jet
-    xslice = N_x/2;   
-    yslice = N_y/2;
-    zslice = [];
-    h = slice(field1,xslice,yslice,zslice);
-    set(h,'edgecolor','none')
-    colorbar();
-    clim([-0.01 0.01]);
-
-    subplot(3,1,2);
-    colormap jet
-    xslice = N_x/2;   
-    yslice = N_y/2;
-    zslice = [];
-    h = slice(field2,xslice,yslice,zslice);
-    set(h,'edgecolor','none')
-    colorbar();
-    clim([-0.01 0.01]);
-
-    subplot(3,1,3);
-    colormap jet
-    xslice = N_x/2;   
-    yslice = N_y/2;
-    zslice = [];
-    h = slice(field3,xslice,yslice,zslice);
-     set(h,'edgecolor','none')
-    colorbar();
-    clim([-0.01 0.01]);
 end
