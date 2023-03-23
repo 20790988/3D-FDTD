@@ -24,7 +24,7 @@ clear
     border_material_index = 1;
 
 % Grid and cell size
-    N_x = 40;
+    N_x = 100;
     N_y = N_x;
     N_z = N_x;
     
@@ -33,7 +33,7 @@ clear
     delta_z = delta_x;
 
 % Simulation length
-    N_t_max = 200;
+    N_t_max = 500;
 
 % Model
     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
@@ -112,20 +112,23 @@ while stop_cond == false
     
     text_update(step,N_t_max,delta_t)
 
-    Ex_old(source_x,source_y,source_z) = source_signal(step+1);
-    Ey_old(source_x,source_y,source_z) = source_signal(step+1);
-    Ez_old(source_x,source_y,source_z) = source_signal(step+1);
+%     Ex_old(source_x,source_y,source_z) = source_signal(step+1);
+%     Ey_old(source_x,source_y,source_z) = source_signal(step+1);
+%     Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
+%     Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
+    Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
 
-    %plot
-    if step>0
+    %====================PLOTTING START=====================%
+    if mod(step,50) ==0
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x,N_y,N_z,step);
+        plot_field(E_tot,3,3,[3,N_z-2],step);
         
-        E_tot_line = diag(E_tot(:,:,N_z/2));
+        E_tot_line = (E_tot(:,N_y/2,N_z/2));
         plot_line(E_tot_line,delta_x*(1:N_x),step);
         tempvar = 0;
     end
-    
+    %====================PLOTTING END=====================%
+
     % H-field calculate
     hofs = offset-1;
     hnfs = offset-2;
@@ -176,17 +179,20 @@ while stop_cond == false
     % E-field Boundary Conditions
     c_ = c(border_material_index);   
     
-    %planes
     temp_offset = 2;
+
+    %planes
+   
     Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ex_new, Ex_old, Ex_old_old);
     Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ey_new, Ey_old, Ey_old_old);
     Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ez_new, Ez_old, Ez_old_old);
     
     %lines
-
+   
     Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ex_new, Ex_old);
     Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ey_new, Ey_old);
     Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ez_new, Ez_old);
+
 % 
 %     %points
 %     Ex_new = assist_mur_abc_point(c_, delta_t, delta_x, N, offset, pi/4, Ex_new, Ex_old);
@@ -260,6 +266,56 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, W_ne
     else
         i1 = i0-1;
     end
+    
+%     fprintf('%c %d %d\n',boundary,ii,i1);
+
+    iii = {i1, ...
+        i1,i0, ...
+        i0,i1, ...
+        i0,i0,i0,i1,i1,i1,i0,i0,i1,i1}; 
+    jjj = {jj, ...
+        jj,jj, ...
+        jj,jj, ...
+        jj+1,jj,jj-1,jj+1,jj,jj-1,jj,jj,jj,jj}; 
+    kkk = {kk, ...
+        kk,kk, ...
+        kk,kk, ...
+        kk,kk,kk,kk,kk,kk,kk+1,kk-1,kk+1,kk-1}; 
+
+    if boundary == 'x'
+        %default
+    elseif boundary == 'y'
+        temp = iii;
+        iii = jjj;
+        jjj = temp;
+    elseif boundary == 'z'
+        temp = iii;
+        iii = kkk;
+        kkk = temp;
+    end
+       
+    coeffs = [-1 ...
+        (c*delta_t-delta)/(c*delta_t+delta) ...
+        (2*delta)/(c*delta_t+delta) ...
+        (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
+
+    W_new_ = coeffs(1)* W_old_old(iii{1},jjj{1},kkk{1}) ...
+        +coeffs(2)* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
+        +coeffs(3)* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5})) ...
+        +coeffs(4)* (W_old(iii{6},jjj{6},kkk{6}) -4*W_old(iii{7},jjj{7},kkk{7}) +W_old(iii{8},jjj{8},kkk{8}) ...
+        +W_old(iii{9},jjj{9},kkk{9}) -4*W_old(iii{10},jjj{10},kkk{10}) +W_old(iii{11},jjj{11},kkk{11})...
+        +W_old(iii{12},jjj{12},kkk{12}) +W_old(iii{13},jjj{13},kkk{13}) +W_old(iii{14},jjj{14},kkk{14}) +W_old(iii{15},jjj{15},kkk{15}));
+end
+
+function W_new_ = mur_abc_plane_with_permute(boundary, c, delta_t, delta, ii, N, jj, kk, W_new, W_old, W_old_old)
+    
+    i0 = ii;
+
+    if ii < N/2
+        i1 = i0+1;
+    else
+        i1 = i0-1;
+    end
 
     if boundary == 'x'
         %default
@@ -302,13 +358,10 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, W_new, 
     ofs = offset;
     nfs = offset-1;
 
-    ii = ofs:N_x-nfs;
-    jj = ofs:N_y-nfs;
-    kk = ofs:N_z-nfs;
+    ii = ofs+1:N_x-nfs-1;
+    jj = ofs+1:N_y-nfs-1;
+    kk = ofs+1:N_z-nfs-1;
     
-    ofs = offset;
-    nfs = offset-1;
-
     W_new_ = W_new;
 
     i0 = {ofs, N_x-nfs,ii};
@@ -319,11 +372,14 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, W_new, 
     j1 = {ofs+1, N_y-nfs-1,jj};
     k1 = {ofs+1, N_z-nfs-1,kk};
 
-    for ind = [1:3]
-        for jnd = [1:3]
-            for knd = [1:3]
-                if sum([ind==3,jnd==3,knd==3]) <= 1
-                    fprintf('%d %d %d\n',ind,jnd,knd);
+    for ind = [3:-1:1]
+        for jnd = [3:-1:1]
+            for knd = [3:-1:1]
+                if sum([ind==3,jnd==3,knd==3]) == 1
+%                     fprintf('%d %d %d\n',ind,jnd,knd);
+                    if knd == 1 && (ind == 1 || jnd ==1)
+%                         fprintf('%d %d %d\n',ind,jnd,knd);
+                    end
                     coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
                     coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
                     W_new_(i0{ind}, j0{jnd}, k0{knd}) = ...
@@ -365,8 +421,8 @@ end
 
 function W_new_ = mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, W_new, W_old)
 
-    [ii_0,jj_0,kk_0] = unpack_coords(coords_1);
-    [ii_1,jj_1,kk_1] = unpack_coords(coords_0);
+    [ii_0,jj_0,kk_0] = unpack_coords(coords_0);
+    [ii_1,jj_1,kk_1] = unpack_coords(coords_1);
 
     W_new_ = W_old(ii_1,jj_1,kk_1) ...
         + (c*delta_t*cos(a)-delta_x)/(c*delta_t*cos(a)+delta_x) ...
@@ -385,7 +441,7 @@ function plot_line(field1,index,step)
     ylabel('|H_{tot}| (A/m)');
     xlabel('x (m)');
     grid on   
-     ylim([0 1]);
+    ylim([0 0.02]);
 end
 
 function plot_field_slice(field,step)
@@ -415,12 +471,12 @@ function plot_field_slice(field,step)
 end
 
 function plot_field(field,N_x,N_y,N_z,step)
-    
-    figure(1)
+
+figure(1)
     colormap jet
-    xslice = N_x/2;   
-    yslice = N_y/2;
-    zslice = N_z/2;
+    xslice = N_x;   
+    yslice = N_y;
+    zslice = N_z;
     s = size(field);
     field(s(1)+1,s(2)+1,s(3)+1) = 0;
 
@@ -432,9 +488,9 @@ function plot_field(field,N_x,N_y,N_z,step)
     xlabel('x');
     ylabel('y');
     zlabel('z');
-    xlim([0 N_x+1])
-    ylim([0 N_x+1])
-    zlim([0 N_x+1])
+%     xlim([0 N_x+1])
+%     ylim([0 N_x+1])
+%     zlim([0 N_x+1])
 
 %     set(gca,'ColorScale','log')
 
@@ -443,6 +499,6 @@ function plot_field(field,N_x,N_y,N_z,step)
         
     grid on   
 
-    clim([0 0.025]);
+    clim([0 0.0025]);
 %     view([1 0 0])
 end
