@@ -4,12 +4,11 @@ function model = import_model(N_x,N_y,N_z,delta_x,delta_y,delta_z)
     model = ones(size);
 
     % mid = N_x/2;
-% for ii = 1:N_x
-%     for jj = 1:N_y
-%         
-%         if sqrt((ii-mid)^2+(jj-mid)^2) <= 30
-%             material(ii,jj) = 2;
-%         end
-%     end
-% end
+    for ii = 60:80
+        for jj = 25:75
+            for kk = 40:60
+               model(ii,jj,kk) = 3;
+            end
+        end
+    end
 end
