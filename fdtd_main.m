@@ -24,7 +24,7 @@ clear
     border_material_index = 1;
 
 % Grid and cell size
-    N_x = 100;
+    N_x = 200;
     N_y = N_x;
     N_z = N_x;
     
@@ -33,7 +33,7 @@ clear
     delta_z = delta_x;
 
 % Simulation length
-    N_t_max = 500;
+    N_t_max = 203;
 
 % Model
     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
@@ -112,23 +112,28 @@ fprintf(strcat(datestr(datetime('now','TimeZone','local','Format','d-MM-y HH:mm:
 %====================LOOP START=====================%
 
 while stop_cond == false
-
-    text_update(step,N_t_max,delta_t)
+    tic
+%     text_update(step,N_t_max,delta_t)
 
 %     Ex_old(source_x,source_y,source_z) = source_signal(step+1);
 %     Ey_old(source_x,source_y,source_z) = source_signal(step+1);
 %     Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
 %     Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
-    Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
+    Jsource_z(source_x,source_y,source_z) = source_signal(step+1);
 
     %====================PLOTTING START=====================%
-    if mod(step,50) ==0
-        E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,3,3,[3,N_z-2],step);
+    if (step == 50) || step == 100 || step == 200
+        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
+%         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step);
         
-        E_tot_line = (E_tot(:,N_y/2,N_z/2));
-        plot_line(E_tot_line,delta_x*(1:N_x),step);
-        tempvar = 0;
+        H_tot_line = (H_tot(:,N_y/2,N_z/2));
+        plot_line(H_tot_line,delta_x*(1:N_x),step);
+        
+%         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
+%         plot_field(E_tot,3,3,[3,N_z-2],step);
+%         
+%         E_tot_line = (E_tot(:,N_y/2,N_z/2));
+%         plot_line(E_tot_line,delta_x*(1:N_x),step);
     end
     %====================PLOTTING END=====================%
 
@@ -139,18 +144,19 @@ while stop_cond == false
     ii = hofs:N_x-hnfs;
     jj = hofs:N_y-hnfs;
     kk = hofs:N_z-hnfs;
-
-    Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
-        + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
-        + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk));
-
-    Hy_new(ii,jj,kk) = D_a(ii,jj,kk).*Hy_old(ii,jj,kk) ...
-        + D_b(ii,jj,kk).*(Ez_old(ii+1,jj,kk)-Ez_old(ii,jj,kk) ...
-        + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1));
-
-    Hz_new(ii,jj,kk) = D_a(ii,jj,kk).*Hz_old(ii,jj,kk) ...
-        + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
-        + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk));
+    
+  
+        Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
+            + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
+            + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk));
+    
+        Hy_new(ii,jj,kk) = D_a(ii,jj,kk).*Hy_old(ii,jj,kk) ...
+            + D_b(ii,jj,kk).*(Ez_old(ii+1,jj,kk)-Ez_old(ii,jj,kk) ...
+            + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1));
+    
+        Hz_new(ii,jj,kk) = D_a(ii,jj,kk).*Hz_old(ii,jj,kk) ...
+            + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
+            + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk));
 
     % H-field increment
     Hx_old = Hx_new;
@@ -164,20 +170,21 @@ while stop_cond == false
     jj = ofs:N_y-nfs;
     kk = ofs:N_z-nfs;
 
-    Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
-        + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
-        + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk) ...
-        + Jsource_x(ii,jj,kk).*delta_x);
 
-    Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
-        + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
-        + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk) ...
-        + Jsource_y(ii,jj,kk).*delta_x);
-
-    Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
-        + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
-        + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
-        + Jsource_z(ii,jj,kk).*delta_x);
+        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
+            + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk) ...
+            + Jsource_x(ii,jj,kk).*delta_x);
+    
+        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
+            + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk) ...
+            + Jsource_y(ii,jj,kk).*delta_x);
+    
+        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
+            + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
+            + Jsource_z(ii,jj,kk).*delta_x);
 
     % E-field Boundary Conditions
     c_ = c(border_material_index);   
@@ -185,11 +192,12 @@ while stop_cond == false
     temp_offset = 2;
 
     %planes
-   
-    Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ex_new, Ex_old, Ex_old_old);
-    Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ey_new, Ey_old, Ey_old_old);
-    Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ez_new, Ez_old, Ez_old_old);
     
+
+        Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ex_new, Ex_old, Ex_old_old);
+        Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ey_new, Ey_old, Ey_old_old);
+        Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ez_new, Ez_old, Ez_old_old);
+    end
     %lines
    
     Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ex_new, Ex_old);
@@ -215,9 +223,9 @@ while stop_cond == false
     if step >= N_t_max
         stop_cond = true;
     end
-
+    toc
 end
-close(progress_bar)
+
 fprintf('Simulation end.\n');
 
 %====================Function Declarations====================%
@@ -453,7 +461,7 @@ function plot_line(field1,index,step)
     ylabel('|H_{tot}| (A/m)');
     xlabel('x (m)');
     grid on   
-    ylim([0 0.02]);
+    ylim([0 7e-5])
 end
 
 function plot_field_slice(field,step)
@@ -511,6 +519,6 @@ figure(1)
         
     grid on   
 
-    clim([0 0.0025]);
+    clim([0 5e-5]);
 %     view([1 0 0])
 end
