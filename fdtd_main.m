@@ -46,6 +46,8 @@ clear
     
 %====================SIMULATION SETUP END=====================%
 
+fprintf('Setup start\n')
+
 N = {N_x,N_y,N_z};
 delta = {delta_x,delta_y,delta_z};
 
@@ -57,7 +59,6 @@ delta_t = delta_x/(max(c)*sqrt(3));
 
 %simulation stability check
 S = max(c)*delta_t/delta_x;
-fprintf('S=%.4f\n',S);
 
 if S>1
     fprintf('Simulation unstable');
@@ -105,11 +106,13 @@ source_z = cast(source_z,'int32');
 step = 0;
 stop_cond = false;
 
+
+fprintf('Simulation start:\n  N_x = %d\n  delta_x = %.4e m\n  delta_t = %.4e s\n  ',N_x,delta_x,delta_t)
+fprintf(strcat(datestr(datetime('now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 %====================LOOP START=====================%
 
 while stop_cond == false
 
-    
     text_update(step,N_t_max,delta_t)
 
 %     Ex_old(source_x,source_y,source_z) = source_signal(step+1);
@@ -212,13 +215,22 @@ while stop_cond == false
     if step >= N_t_max
         stop_cond = true;
     end
+
 end
-fprintf('simulation end\n');
+close(progress_bar)
+fprintf('Simulation end.\n');
 
 %====================Function Declarations====================%
 
 function text_update(step,N_t_max,delta_t)
-    fprintf('Step %d/%d %.4e s\n', step, N_t_max, delta_t*step);
+   persistent reverseStr;
+   if step == 0 
+       reverseStr = '';
+   end
+
+   msg = sprintf('Step %d/%d  t = %.3e s\n', step, N_t_max, delta_t*step);
+   fprintf([reverseStr, msg]);
+   reverseStr = repmat(sprintf('\b'), 1, length(msg));
 end
 
 function [ii_,jj_,kk_] = unpack_coords(coord)
