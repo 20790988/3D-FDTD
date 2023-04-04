@@ -9,9 +9,9 @@
 - Simulation timestep tied to spacial step to ensure stability and minimise dispersion
 
 ### Planned Features
-- Support for superconducting materials: two-fluid model
-- Speed up simulation by use of parallelisation
-- ~~Rectangular simulation space with cube elements $N_x \neq N_y$ but $\Delta x = \Delta y$.~~
-- uniform rectangular cuboid elements $N_x \neq N_y$ and $\Delta x \neq \Delta y$
-- non-uniform rectangular cuboid elements
-- Ability to define model with physical measurements instead of cell counts
+- [ ] Support for superconducting materials: two-fluid model
+- [ ] Speed up simulation by use of parallelisation
+- [x] Rectangular simulation space with cube elements $N_x \neq N_y$ but $\Delta x = \Delta y$.
+- [ ] uniform rectangular cuboid elements $N_x \neq N_y$ and $\Delta x \neq \Delta y$
+- [ ] non-uniform rectangular cuboid elements
+- [x] Ability to define model with physical measurements instead of cell counts
