@@ -13,7 +13,7 @@ clear
     sigma_m = [0 0 0];
     
     epsilon_0 = 8.8542e-12;
-    epsilon_r = [1 60e6 2];
+    epsilon_r = [1 1 2];
     epsilon = epsilon_0*epsilon_r;
     
     mu_0 = 1.2566e-6;
@@ -25,21 +25,18 @@ clear
 
 % Grid and cell size
     N_x = 100;
-    N_y = N_x;
-    N_z = N_x;
+    N_y = 80;
+    N_z = 60;
     
     delta_x = 3e-3;
     delta_y = delta_x;
     delta_z = delta_x;
 
 % Simulation length
-    N_t_max = 203;
+    N_t_max = 500;
 
 % Model
     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
-
-% Simulation instability max value
-    e_field_max = 1e6;
 
 % Space around E-field
     offset = 3;
@@ -123,17 +120,18 @@ while stop_cond == false
 
     %====================PLOTTING START=====================%
     if step>0
-%         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
-%         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step);
-%         
+        
+        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
+        plot_field(H_tot,N_x/2,N_y/2,N_z/2,step);
+        
 %         H_tot_line = (H_tot(:,N_y/2,N_z/2));
 %         plot_line(H_tot_line,delta_x*(1:N_x),step);
         
-        E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,[],N_z/2,step);
-        
-        E_tot_line = (E_tot(:,N_y/2,N_z/2));
-        plot_line(E_tot_line,delta_x*(1:N_x),step);
+%         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
+%          plot_field(E_tot,N_x/2,[],N_z/2,step);
+%         
+%         E_tot_line = (E_tot(:,N_y/2,N_z/2));
+%         plot_line(E_tot_line,delta_x*(1:N_x),step);
     end
     %====================PLOTTING END=====================%
 
@@ -267,9 +265,9 @@ function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, offset, W_new, W
         N_x-nfs, N_x, jj, kk, W_new, W_old, W_old_old);
 
     W_new_(ii,ofs,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
-        ofs, N_y, ii, kk, W_new, W_old, W_old_old);
+        ofs, N_y, kk, ii, W_new, W_old, W_old_old);
     W_new_(ii,N_y-nfs,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
-        N_x-nfs, N_y, ii, kk, W_new, W_old, W_old_old);
+        N_y-nfs, N_y, kk, ii, W_new, W_old, W_old_old);
 
     W_new_(ii,jj,ofs) = mur_abc_plane('z', c_, delta_t, delta_z, ...
         ofs, N_z, ii, jj, W_new, W_old, W_old_old);
@@ -305,13 +303,19 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, W_ne
     if boundary == 'x'
         %default
     elseif boundary == 'y'
-        temp = iii;
-        iii = jjj;
-        jjj = temp;
+        tempi = iii;
+        tempj = jjj;
+        tempk = kkk;
+        iii = tempk;
+        jjj = tempi;
+        kkk = tempj;
     elseif boundary == 'z'
-        temp = iii;
-        iii = kkk;
-        kkk = temp;
+        tempi = iii;
+        tempj = jjj;
+        tempk = kkk;
+        iii = tempj;
+        jjj = tempk;
+        kkk = tempi;
     end
        
     coeffs = [-1 ...
@@ -396,10 +400,6 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, W_new, 
         for jnd = [3:-1:1]
             for knd = [3:-1:1]
                 if sum([ind==3,jnd==3,knd==3]) == 1
-%                     fprintf('%d %d %d\n',ind,jnd,knd);
-                    if knd == 1 && (ind == 1 || jnd ==1)
-%                         fprintf('%d %d %d\n',ind,jnd,knd);
-                    end
                     coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
                     coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
                     W_new_(i0{ind}, j0{jnd}, k0{knd}) = ...
@@ -500,18 +500,19 @@ figure(1)
     zslice = N_z;
     s = size(field);
     field(s(1)+1,s(2)+1,s(3)+1) = 0;
-
+    
+    field = permute(field,[2 1 3]);
     h = slice(field,xslice,yslice,zslice);
     set(h,'edgecolor','none')
 
     name = sprintf('n = %d',step);
     title(name);
-    xlabel('x');
-    ylabel('y');
-    zlabel('z');
-%     xlim([0 N_x+1])
-%     ylim([0 N_x+1])
-%     zlim([0 N_x+1])
+    xlabel('x (cells)');
+    ylabel('y (cells)');
+    zlabel('z (cells)');
+    xlim([0 s(1)]+1)
+    ylim([0 s(2)]+1)
+    zlim([0 s(3)]+1)
 
 %     set(gca,'ColorScale','log')
 
@@ -521,6 +522,6 @@ figure(1)
     grid on   
 
 %     clim([0 5e-5]);
-    clim([0 0.004]);
-%     view([1 0 0])
+    clim([0 2e-5]);
+%      view([0 0 1]);
 end
