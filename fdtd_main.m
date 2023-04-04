@@ -9,34 +9,40 @@ clear
 %====================SIMULATION SETUP START====================%
 
 % Material specification
-    sigma = [0 60e6 0];
-    sigma_m = [0 0 0];
+    [param, material, source] = import_model;
+
+    sigma = param.material(1,:);
+    sigma_m = param.material(2,:);
     
     epsilon_0 = 8.8542e-12;
-    epsilon_r = [1 1 2];
+    epsilon_r = param.material(3,:);
     epsilon = epsilon_0*epsilon_r;
     
     mu_0 = 1.2566e-6;
-    mu_r = [1 1 1];
+    mu_r = param.material(4,:);
     mu = mu_0*mu_r;
 
 % Material at Border
-    border_material_index = 1;
+    border_material_index = param.border_material_index;
 
 % Grid and cell size
-    N_x = 100;
-    N_y = 80;
-    N_z = 60;
+    N = param.N;
+
+    N_x = N{1};
+    N_y = N{2};
+    N_z = N{3};
     
-    delta_x = 3e-3;
-    delta_y = delta_x;
-    delta_z = delta_x;
+    delta = param.delta;
+    delta_x = delta{1};
+    delta_y = delta{2};
+    delta_z = delta{3};
 
 % Simulation length
-    N_t_max = 500;
+    
+    N_t_max = param.N_t_max;
 
 % Model
-    material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
+%     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
 
 % Space around E-field
     offset = 3;
@@ -45,14 +51,18 @@ clear
 
 fprintf('Setup start\n')
 
-N = {N_x,N_y,N_z};
-delta = {delta_x,delta_y,delta_z};
+% N = {N_x,N_y,N_z};
+% delta = {delta_x,delta_y,delta_z};
 
 c = 1./sqrt(epsilon.*mu);
 delta_t = delta_x/(max(c)*sqrt(3));
 
 % Excitation (J)
-[source_x, source_y, source_z, source_signal] = import_source(N_x,N_y,N_z,N_t_max,delta_t);
+source_coords = source.coord;
+source_x = source_coords{1};
+source_y = source_coords{2};
+source_z = source_coords{3};
+
 
 %simulation stability check
 S = max(c)*delta_t/delta_x;
@@ -116,7 +126,7 @@ while stop_cond == false
 %     Ey_old(source_x,source_y,source_z) = source_signal(step+1);
 %     Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
 %     Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
-    Jsource_z(source_x,source_y,source_z) = source_signal(step+1);
+    Jsource_z(source_x,source_y,source_z) = source.value{3}(step*delta_t);
 
     %====================PLOTTING START=====================%
     if step>0
@@ -510,9 +520,10 @@ figure(1)
     xlabel('x (cells)');
     ylabel('y (cells)');
     zlabel('z (cells)');
-    xlim([0 s(1)]+1)
-    ylim([0 s(2)]+1)
-    zlim([0 s(3)]+1)
+    lim = max(s)+1;
+    xlim([0 lim])
+    ylim([0 lim])
+    zlim([0 lim])
 
 %     set(gca,'ColorScale','log')
 
