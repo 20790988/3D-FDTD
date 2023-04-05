@@ -9,11 +9,15 @@ function [param, grid, source] = import_model()
 %====================SIMULATION PARAMETERS====================%
 
     % Material specification
-    sigma = [0 60e6 0];
-    sigma_m = [0 0 0];    
-    epsilon_r = [1 1 2];
-    mu_r = [1 1 1];
-        
+    sigma = [0 0];
+    sigma_m = [0 0];    
+    epsilon_r = [1 2];
+    mu_r = [1 1];
+    
+    PEC = 0;
+    FREE_SPACE = 1;
+    DIELECTRIC = 2;
+
     % Material at Border
     param.border_material_index = 1;
     
@@ -21,19 +25,19 @@ function [param, grid, source] = import_model()
     unit = 1e-3;
 
     M_x = 300;
-    M_y = 280;
-    M_z = 260;
+    M_y = 300;
+    M_z = 300;
 
-    delta_x = 3e-3;
+    delta_x = 1.5e-3;
     delta_y = delta_x;
     delta_z = delta_x;
       
     %Grid alignment behaviour
-    grid_pause_on_unaligned = true;
+    grid_pause_on_unaligned = false;
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 1e-9;
+    param.M_t_max = 2e-9;
     
 %============================================================%
 
@@ -46,11 +50,11 @@ function [param, grid, source] = import_model()
 
 %====================MODEL SETUP====================%
 
-    grid = add_cuboid(grid,param.delta,unit,100,200,30,200,30,200,3);
+    grid = add_cuboid(grid,param.delta,unit,180,240,75,225,120,180,PEC);
   
 %====================SOURCE POSITION====================%
 
-    source.coord = m_to_n(150,150,150,unit,param.delta);
+    source.coord = m_to_n(150,[60:delta_x:240],150,unit,param.delta);
 
 %==================================================%
     if grid_max_error < grid_error_tolerance
@@ -68,7 +72,6 @@ end
 
 %====================SOURCE SIGNAL====================%
 function source_signal = source_func(t)
-
     freq = 10e9;
     source_signal = sin(2*pi*freq*t);
 end

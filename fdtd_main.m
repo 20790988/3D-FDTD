@@ -42,6 +42,9 @@ clear
     
     N_t_max = floor(param.M_t_max/delta_t);
 
+% Fix sigma
+    sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
+
 % Model
 %     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
 
@@ -51,8 +54,6 @@ clear
 %====================SIMULATION SETUP END=====================%
 
 fprintf('Setup start\n')
-
-
 
 % Excitation (J)
 source_coords = source.coord;
@@ -75,6 +76,10 @@ C_b_single = (delta_t./(epsilon.*delta_x))./(1+(sigma.*delta_t)./(2.*epsilon));
 
 D_a_single = (1-(sigma_m.*delta_t)./(2.*mu))./(1+(sigma_m.*delta_t)./(2.*mu));
 D_b_single = (delta_t./(mu.*delta_x))./(1+(sigma_m.*delta_t)./(2.*mu));
+
+pec_mask = (material ~= 0);
+
+material(material==0) = 1;
 
 C_a = C_a_single(material);
 C_b = C_b_single(material);
@@ -111,7 +116,7 @@ step = 0;
 stop_cond = false;
 
 
-fprintf('Simulation start:\n  N_x = %d\n  delta_x = %.4e m\n  delta_t = %.4e s\n  ',N_x,delta_x,delta_t)
+fprintf('Simulation start:\n  N_x = %d\n  delta_x = %s m\n  delta_t = %s s\n  ',N_x,num2eng(delta_x),num2eng(delta_t))
 fprintf(strcat(datestr(datetime('now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 %====================LOOP START=====================%
 
@@ -126,19 +131,20 @@ while stop_cond == false
     Jsource_z(source_x,source_y,source_z) = source.value{3}(step*delta_t);
 
     %====================PLOTTING START=====================%
-    if step>0
+    if mod(step,10) ==0
         
-        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
-        plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
+%         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
+%         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
         
 %         H_tot_line = (H_tot(:,N_y/2,N_z/2));
 %         plot_line(H_tot_line,delta_x*(1:N_x),step);
         
-%         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-%          plot_field(E_tot,N_x/2,[],N_z/2,step);
+        E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
+        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
 %         
-%         E_tot_line = (E_tot(:,N_y/2,N_z/2));
-%         plot_line(E_tot_line,delta_x*(1:N_x),step);
+        E_tot_line = (E_tot(:,N_y/2+0.5,N_z/2+0.5));
+        plot_line(E_tot_line,delta_x*(1:N_x),step);
+        temp = 0;
     end
     %====================PLOTTING END=====================%
 
@@ -149,8 +155,7 @@ while stop_cond == false
     ii = hofs:N_x-hnfs;
     jj = hofs:N_y-hnfs;
     kk = hofs:N_z-hnfs;
-    
-  
+      
     Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
         + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk));
@@ -190,6 +195,12 @@ while stop_cond == false
         + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
         + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
         + Jsource_z(ii,jj,kk).*delta_x);
+
+    % PEC mask
+    Ex_new = Ex_new.*pec_mask;
+    Ey_new = Ey_new.*pec_mask;
+    Ez_new = Ez_new.*pec_mask;
+
 
     % E-field Boundary Conditions
     c_ = c(border_material_index);   
@@ -241,7 +252,7 @@ function text_update(step,N_t_max,delta_t)
        reverseStr = '';
    end
 
-   msg = sprintf('Step %d/%d  t = %.3e s\n', step, N_t_max, delta_t*step);
+   msg = sprintf('Step %d/%d  t = %s s\n', step, N_t_max, num2eng(delta_t*step));
    fprintf([reverseStr, msg]);
    reverseStr = repmat(sprintf('\b'), 1, length(msg));
 end
@@ -469,7 +480,7 @@ function plot_line(field1,index,step)
     xlabel('x (m)');
     grid on   
 %     ylim([0 7e-5])
-    ylim([0 0.025]);
+    ylim([0 0.08]);
 end
 
 function plot_field_slice(field,step)
@@ -536,8 +547,8 @@ figure(1)
         name = sprintf('n = %d, t = %s (s)',step,num2eng(step*delta_t));
         title(name);
         xlabel('x (m)');
-        ylabel('y (y)');
-        zlabel('z (z)');
+        ylabel('y (m)');
+        zlabel('z (m)');
         xlim([0 max(x_index)])
         ylim([0 max(y_index)])
         zlim([0 max(z_index)])
@@ -546,6 +557,7 @@ figure(1)
     bar = colorbar();
     ylabel(bar,'|H_{tot}| (A/m)');
     grid on   
-    clim([0 2e-5]);
+%     clim([0 2e-5]);
+    clim([0 0.02]);
 
 end
