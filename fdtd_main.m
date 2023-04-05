@@ -6,8 +6,6 @@
 
 clear
 
-%====================SIMULATION SETUP START====================%
-
 % Material specification
     [param, material, source] = import_model;
 
@@ -36,10 +34,13 @@ clear
     delta_x = delta{1};
     delta_y = delta{2};
     delta_z = delta{3};
+    
+    c = 1./sqrt(epsilon.*mu);
+    delta_t = delta_x/(max(c)*sqrt(3));
 
 % Simulation length
     
-    N_t_max = param.N_t_max;
+    N_t_max = floor(param.M_t_max/delta_t);
 
 % Model
 %     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
@@ -51,11 +52,7 @@ clear
 
 fprintf('Setup start\n')
 
-% N = {N_x,N_y,N_z};
-% delta = {delta_x,delta_y,delta_z};
 
-c = 1./sqrt(epsilon.*mu);
-delta_t = delta_x/(max(c)*sqrt(3));
 
 % Excitation (J)
 source_coords = source.coord;
@@ -132,7 +129,7 @@ while stop_cond == false
     if step>0
         
         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
-        plot_field(H_tot,N_x/2,N_y/2,N_z/2,step);
+        plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
         
 %         H_tot_line = (H_tot(:,N_y/2,N_z/2));
 %         plot_line(H_tot_line,delta_x*(1:N_x),step);
@@ -501,38 +498,54 @@ function plot_field_slice(field,step)
     clim([0 1]);
 end
 
-function plot_field(field,N_x,N_y,N_z,step)
+function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t)
 
 figure(1)
     colormap jet
-    xslice = N_x;   
-    yslice = N_y;
-    zslice = N_z;
     s = size(field);
     field(s(1)+1,s(2)+1,s(3)+1) = 0;
     
     field = permute(field,[2 1 3]);
-    h = slice(field,xslice,yslice,zslice);
-    set(h,'edgecolor','none')
+    
+    if ~exist('deltas','var')
 
-    name = sprintf('n = %d',step);
-    title(name);
-    xlabel('x (cells)');
-    ylabel('y (cells)');
-    zlabel('z (cells)');
-    lim = max(s)+1;
-    xlim([0 lim])
-    ylim([0 lim])
-    zlim([0 lim])
+        h = slice(field,slice_x,slice_y,slice_z);
+        set(h,'edgecolor','none')
+    
+        name = sprintf('n = %d',step);
+        title(name);
+        xlabel('x (cells)');
+        ylabel('y (cells)');
+        zlabel('z (cells)');
+        lim = max(s)+1;
+        xlim([0 lim])
+        ylim([0 lim])
+        zlim([0 lim])
 
-%     set(gca,'ColorScale','log')
+    else
+        [delta_x,delta_y,delta_z] = unpack_coords(deltas);
+
+        x_index = (0:s(1)).*delta_x;
+        y_index = (0:s(2)).*delta_y;
+        z_index = (0:s(3)).*delta_z;
+        
+        [plot_x,plot_y,plot_z] = meshgrid(x_index,y_index,z_index);
+        h = slice(plot_x,plot_y,plot_z,field,slice_x*delta_x,slice_y*delta_y,slice_z*delta_z);
+        set(h,'edgecolor','none')
+    
+        name = sprintf('n = %d, t = %s (s)',step,num2eng(step*delta_t));
+        title(name);
+        xlabel('x (m)');
+        ylabel('y (y)');
+        zlabel('z (z)');
+        xlim([0 max(x_index)])
+        ylim([0 max(y_index)])
+        zlim([0 max(z_index)])
+    end
 
     bar = colorbar();
     ylabel(bar,'|H_{tot}| (A/m)');
-        
     grid on   
-
-%     clim([0 5e-5]);
     clim([0 2e-5]);
-%      view([0 0 1]);
+
 end
