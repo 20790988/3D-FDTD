@@ -7,7 +7,7 @@
 clear
 
 fprintf('Start\n')
-%====================MODEL IMPORT START=====================%
+%====================MODEL IMPORT=====================%
 
     [param, material, source] = model_waveguide;
     
@@ -56,8 +56,8 @@ fprintf('Start\n')
     source_y = source_coords{2};
     source_z = source_coords{3};
     
-    source_val_x = source.value{1}((0:N_t_max)*delta_t);
-    source_val_y = source.value{2}((0:N_t_max)*delta_t);
+%     source_val_x = source.value{1}((0:N_t_max)*delta_t);
+%     source_val_y = source.value{2}((0:N_t_max)*delta_t);
     source_val_z = source.value{3}((0:N_t_max)*delta_t);
     
     source_N_t_max = floor(source.t_max/delta_t);
@@ -118,8 +118,8 @@ source_z = floor(source_z);
 step = 0;
 stop_cond = false;
 
-fprintf('Simulation start:\n  N_x = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
-    ,N_x,num2eng(delta_x),num2eng(delta_t))
+fprintf('Simulation start:\n  #Cells = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
+    ,N_x*N_y*N_z,num2eng(delta_x),num2eng(delta_t))
 fprintf(strcat(datestr(datetime( ...
     'now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 
@@ -130,13 +130,15 @@ while stop_cond == false
     text_update(step,N_t_max,delta_t)
     
     if source_N_t_max == 0 || source_N_t_max>=step
-        Jsource_x(source_x,source_y,source_z) = source_val_x(step+1);
-        Jsource_y(source_x,source_y,source_z) = source_val_y(step+2);
-        Jsource_z(source_x,source_y,source_z) = source_val_z(step+1);
+%         Ex_old(source_x,source_y,source_z) = source_val_x(step+1);
+%         Ey_old(source_x,source_y,source_z) = source_val_y(step+2);
+        Ez_old(source_x,source_y,source_z) = source_val_z(step+1);
+    else
+        temp = 0;
     end
 
     %====================PLOTTING START=====================%
-    if true
+    if step>300
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
@@ -145,12 +147,12 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(1:N_x),step);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-%         plot_field(E_tot,N_x/2,N_y/2,[],step,delta,delta_t);
+        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
 % %       
-        tempx = floor(N_x/2);
+        tempz = floor(N_z/2);
         tempy = floor(N_y/2);
-        E_tot_line = (E_tot(tempx,tempy,:));
-        plot_line(E_tot_line,delta_x*(1:N_z),step);
+        E_tot_line = (E_tot(:,tempy,tempz));
+        plot_line(E_tot_line,delta_x*(0:N_x-1),step);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -535,6 +537,5 @@ figure(1)
     grid on   
 %     clim([0 2e-5]);
      clim([0 0.8]);
-     camup([0 -1 0]);
 
 end

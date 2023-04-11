@@ -2,7 +2,8 @@ function [param, grid, source] = model_waveguide()
     
     param = struct('material',0);
     source = struct('coord',0);
-    source.value = {@source_func,@source_func,@source_func};
+    source.t_max = 0;
+    source.value = {0,0,@source_func};
     
     global grid_pause_on_unaligned grid_error_tolerance grid_max_error
     grid_max_error = 0;
@@ -24,9 +25,9 @@ function [param, grid, source] = model_waveguide()
     % Grid and cell size in units 
     unit = 1e-3;
 
-    M_x = 51;
-    M_y = 21;
-    M_z = 500;
+    M_x = 300;
+    M_y = 50+40;
+    M_z = 20+40;
 
     delta_x = 1;
     delta_y = delta_x;
@@ -37,7 +38,7 @@ function [param, grid, source] = model_waveguide()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 100e-9;
+    param.M_t_max = 3e-9;
     
 %============================================================%
 
@@ -53,15 +54,18 @@ function [param, grid, source] = model_waveguide()
 %====================MODEL SETUP====================%
     
     grid(:,:,:) = FREE_SPACE;
-
-    grid = add_tube_z(grid,delta,3,48,3,18,0,M_z,PEC);
+    ofs = 20;
+    grid = add_cuboid(grid,delta,ofs,M_x-ofs,0+ofs,M_y-ofs,0+ofs,0+ofs,PEC);
+    grid = add_cuboid(grid,delta,ofs,M_x-ofs,0+ofs,M_y-ofs,M_z-ofs,M_z-ofs,PEC);
   
 %====================SOURCE PROPERTIES====================%
+    %if t_max = 0 (default), source will continue as long as simulation
 
-    source.coord = m_to_n([5:delta_x:46],[5:delta_y:16],250,delta);
-    source.t_max = 0;
+    source.coord = m_to_n(M_x/2, ofs+1:delta_y:M_y-ofs-1, ofs+1:delta_z:M_z-ofs-1, delta);
+%     source.t_max = 7.7032e-10;
 
 %==================================================%
+
     if grid_max_error < grid_error_tolerance
         fprintf('Model setup sucsessful\n');    
     else
@@ -77,8 +81,9 @@ end
 
 %====================SOURCE SIGNAL====================%
 function source_signal = source_func(t)
-    freq = 5e9;
-    source_signal = sin(2*pi*freq*t);
+    t0 = 6.7403e-10;
+    T = 7.7032e-11;
+    source_signal = exp(-(t-t0).^2./(T^2));
 end
 %==================================================%
 
@@ -91,7 +96,7 @@ function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material)
 
 end
 
-function grid = add_tube_z(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material)
+function grid = add_tube(grid,delta,direction,xmin,xmax,ymin,ymax,zmin,zmax,material)
    
     min = m_to_n(xmin,ymin,zmin,delta);
     max = m_to_n(xmax,ymax,zmax,delta);
