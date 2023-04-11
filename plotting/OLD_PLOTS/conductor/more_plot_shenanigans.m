@@ -37,11 +37,10 @@ figure(2);
 clf
 hold on
 plot(index,H_sim_100,'r');
-plot(H_cst_100(:,1)/1e3,H_cst_100(:,2),'b')
+plot(H_cst_100(:,1)/1e3,H_cst_100(:,2),'b');
 xline((120-100)*delta_x);
 xline((160-100)*delta_x);
 ylim([0 0.08])
-
 xlim([-0.15, 0.15])
 xlabel('x (m)')
 ylabel('|E_{tot}| (V/m)');

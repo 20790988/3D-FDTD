@@ -1,14 +1,16 @@
 %
 %  3D-FDTD
 %  K Meyer
-%  2023-03-21
+%  2023-04-11
 % 
 
 clear
 
-% Material specification
-    [param, material, source] = import_model;
+fprintf('Start\n')
+%====================MODEL IMPORT START=====================%
 
+    [param, material, source] = model_waveguide;
+    
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
     
@@ -37,7 +39,7 @@ clear
     
     c = 1./sqrt(epsilon.*mu);
     delta_t = delta_x/(max(c)*sqrt(3));
-
+    
 % Simulation length
     
     N_t_max = floor(param.M_t_max/delta_t);
@@ -45,24 +47,23 @@ clear
 % Fix sigma
     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
 
-% Model
-%     material = import_model(N_x,N_y,N_z,delta_x,delta_x,delta_x);
-
-% Space around E-field
+% Space around E-field in grid
     offset = 3;
+
+% Source (J) setup
+    source_coords = source.coord;
+    source_x = source_coords{1};
+    source_y = source_coords{2};
+    source_z = source_coords{3};
     
-%====================SIMULATION SETUP END=====================%
+    source_val_x = source.value{1}((0:N_t_max)*delta_t);
+    source_val_y = source.value{2}((0:N_t_max)*delta_t);
+    source_val_z = source.value{3}((0:N_t_max)*delta_t);
+    
+    source_N_t_max = floor(source.t_max/delta_t);
 
-fprintf('Setup start\n')
+%====================SIMULATION SETUP AND INITIALISE=====================%
 
-% Excitation (J)
-source_coords = source.coord;
-source_x = source_coords{1};
-source_y = source_coords{2};
-source_z = source_coords{3};
-
-
-%simulation stability check
 S = max(c)*delta_t/delta_x;
 
 if S>1
@@ -70,8 +71,9 @@ if S>1
     return
 end
 
-% setup simulation space
-C_a_single = (1-(sigma.*delta_t)./(2.*epsilon))./(1+(sigma.*delta_t)./(2.*epsilon));
+% material setup
+C_a_single = (1-(sigma.*delta_t)./(2.*epsilon)) ...
+    ./(1+(sigma.*delta_t)./(2.*epsilon));
 C_b_single = (delta_t./(epsilon.*delta_x))./(1+(sigma.*delta_t)./(2.*epsilon));
 
 D_a_single = (1-(sigma_m.*delta_t)./(2.*mu))./(1+(sigma_m.*delta_t)./(2.*mu));
@@ -87,6 +89,7 @@ C_b = C_b_single(material);
 D_a = D_a_single(material);
 D_b = D_b_single(material);
 
+% matrix declaration
 Ex_old_old = zeros(N_x,N_y,N_z);
 Ey_old_old = zeros(N_x,N_y,N_z);
 Ez_old_old = zeros(N_x,N_y,N_z);
@@ -108,30 +111,32 @@ Jsource_x = zeros(N_x,N_y,N_z);
 Jsource_y = zeros(N_x,N_y,N_z);
 Jsource_z = zeros(N_x,N_y,N_z);
 
-source_x = cast(source_x,'int32');
-source_y = cast(source_y,'int32');
-source_z = cast(source_z,'int32');
+source_x = floor(source_x);
+source_y = floor(source_y);
+source_z = floor(source_z);
 
 step = 0;
 stop_cond = false;
 
+fprintf('Simulation start:\n  N_x = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
+    ,N_x,num2eng(delta_x),num2eng(delta_t))
+fprintf(strcat(datestr(datetime( ...
+    'now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 
-fprintf('Simulation start:\n  N_x = %d\n  delta_x = %s m\n  delta_t = %s s\n  ',N_x,num2eng(delta_x),num2eng(delta_t))
-fprintf(strcat(datestr(datetime('now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 %====================LOOP START=====================%
 
 while stop_cond == false
 
     text_update(step,N_t_max,delta_t)
-
-%     Ex_old(source_x,source_y,source_z) = source_signal(step+1);
-%     Ey_old(source_x,source_y,source_z) = source_signal(step+1);
-%     Jsource_x(source_x,source_y,source_z) = source_signal(step+1);
-%     Jsource_y(source_x,source_y,source_z) = source_signal(step+1);
-    Jsource_z(source_x,source_y,source_z) = source.value{3}(step*delta_t);
+    
+    if source_N_t_max == 0 || source_N_t_max>=step
+        Jsource_x(source_x,source_y,source_z) = source_val_x(step+1);
+        Jsource_y(source_x,source_y,source_z) = source_val_y(step+2);
+        Jsource_z(source_x,source_y,source_z) = source_val_z(step+1);
+    end
 
     %====================PLOTTING START=====================%
-    if mod(step,10) ==0
+    if true
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
@@ -140,10 +145,12 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(1:N_x),step);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
-%         
-        E_tot_line = (E_tot(:,N_y/2+0.5,N_z/2+0.5));
-        plot_line(E_tot_line,delta_x*(1:N_x),step);
+%         plot_field(E_tot,N_x/2,N_y/2,[],step,delta,delta_t);
+% %       
+        tempx = floor(N_x/2);
+        tempy = floor(N_y/2);
+        E_tot_line = (E_tot(tempx,tempy,:));
+        plot_line(E_tot_line,delta_x*(1:N_z),step);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -180,7 +187,6 @@ while stop_cond == false
     jj = ofs:N_y-nfs;
     kk = ofs:N_z-nfs;
 
-
     Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
         + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk) ...
@@ -196,35 +202,29 @@ while stop_cond == false
         + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
         + Jsource_z(ii,jj,kk).*delta_x);
 
-    % PEC mask
+    % apply PEC: set E-fields to zero in PEC region
     Ex_new = Ex_new.*pec_mask;
     Ey_new = Ey_new.*pec_mask;
     Ez_new = Ez_new.*pec_mask;
 
-
     % E-field Boundary Conditions
     c_ = c(border_material_index);   
     
-    temp_offset = 2;
+    bc_offset = 2;
 
-    %planes
-    
+    Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
+        Ex_new, Ex_old, Ex_old_old);
+    Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
+        Ey_new, Ey_old, Ey_old_old);
+    Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
+        Ez_new, Ez_old, Ez_old_old);
 
-    Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ex_new, Ex_old, Ex_old_old);
-    Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ey_new, Ey_old, Ey_old_old);
-    Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, temp_offset, Ez_new, Ez_old, Ez_old_old);
-
-    %lines
-   
-    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ex_new, Ex_old);
-    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ey_new, Ey_old);
-    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, temp_offset, pi/4, Ez_new, Ez_old);
-
-% 
-%     %points
-%     Ex_new = assist_mur_abc_point(c_, delta_t, delta_x, N, offset, pi/4, Ex_new, Ex_old);
-%     Ey_new = assist_mur_abc_point(c_, delta_t, delta_x, N, offset, pi/4, Ey_new, Ey_old);
-%     Ez_new = assist_mur_abc_point(c_, delta_t, delta_x, N, offset, pi/4, Ez_new, Ez_old);
+    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
+        Ex_new, Ex_old);
+    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
+        Ey_new, Ey_old);
+    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
+        Ez_new, Ez_old);
 
     % E-field increment
     Ex_old_old = Ex_old;
@@ -293,7 +293,8 @@ function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, offset, W_new, W
         N_z-nfs, N_z, ii, jj, W_new, W_old, W_old_old);
 end
 
-function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, W_new, W_old, W_old_old)
+function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
+    W_new, W_old, W_old_old)
     
     i0 = ii;
 
@@ -303,8 +304,6 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, W_ne
         i1 = i0-1;
     end
     
-%     fprintf('%c %d %d\n',boundary,ii,i1);
-
     iii = {i1, ...
         i1,i0, ...
         i0,i1, ...
@@ -392,7 +391,8 @@ function W_new_ = mur_abc_plane_with_permute(boundary, c, delta_t, delta, ii, N,
     end
 end
 
-function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, W_new, W_old)
+function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, ...
+    W_new, W_old)
 
     [delta_x, delta_y, delta_z] = unpack_coords(deltas);
     [N_x, N_y, N_z] = unpack_coords(Ns);
@@ -414,50 +414,24 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, W_new, 
     j1 = {ofs+1, N_y-nfs-1,jj};
     k1 = {ofs+1, N_z-nfs-1,kk};
 
-    for ind = [3:-1:1]
-        for jnd = [3:-1:1]
-            for knd = [3:-1:1]
+    for ind = 3:-1:1
+        for jnd = 3:-1:1
+            for knd = 3:-1:1
                 if sum([ind==3,jnd==3,knd==3]) == 1
                     coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
                     coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
                     W_new_(i0{ind}, j0{jnd}, k0{knd}) = ...
-                    mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, W_new, W_old);   
+                    mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1,...
+                    W_new, W_old);   
                 end          
             end
         end
     end
 end
 
-function W_new_ = assist_mur_abc_point(c, delta_t, delta_x, Ns, offset, a, W_new, W_old)
-    
-    [N_x, N_y, N_z] = unpack_coords(Ns);
 
-    ofs = offset;
-    nfs = offset-1;
-    
-    W_new_ = W_new;
-
-    i0 = {ofs, N_x-nfs};
-    j0 = {ofs, N_y-nfs};
-    k0 = {ofs, N_z-nfs};
-
-    i1 = {ofs+1, N_x-nfs-1};
-    j1 = {ofs+1, N_y-nfs-1};
-    k1 = {ofs+1, N_z-nfs-1};
-
-    for ind = [1,2]
-        for jnd = [1,2]
-            for knd = [1,2]
-                coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
-                coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
-                W_new_(i0{ind}, j0{jnd}, k0{knd}) = ...
-                mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, W_new, W_old);             
-            end
-        end
-    end
-end
-
-function W_new_ = mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, W_new, W_old)
+function W_new_ = mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, ...
+    W_new, W_old)
 
     [ii_0,jj_0,kk_0] = unpack_coords(coords_0);
     [ii_1,jj_1,kk_1] = unpack_coords(coords_1);
@@ -472,15 +446,14 @@ function plot_line(field1,index,step)
     figure(2)
     field1 = reshape(field1,1,length(field1));
     plot(index,[field1]);
-%     theory_field = 1./(2*pi*(abs(index-5).^2));
-%     fit_field = 0.01596./((abs(index-5)+2.5));
+
     name = sprintf('n = %d',step);
     title(name);
     ylabel('|H_{tot}| (A/m)');
     xlabel('x (m)');
     grid on   
 %     ylim([0 7e-5])
-    ylim([0 0.08]);
+    ylim([0 1.2]);
 end
 
 function plot_field_slice(field,step)
@@ -541,7 +514,10 @@ figure(1)
         z_index = (0:s(3)).*delta_z;
         
         [plot_x,plot_y,plot_z] = meshgrid(x_index,y_index,z_index);
-        h = slice(plot_x,plot_y,plot_z,field,slice_x*delta_x,slice_y*delta_y,slice_z*delta_z);
+        h = slice(plot_x,plot_y,plot_z,field, ...
+            slice_x*delta_x, ...
+            slice_y*delta_y, ...
+            slice_z*delta_z);
         set(h,'edgecolor','none')
     
         name = sprintf('n = %d, t = %s (s)',step,num2eng(step*delta_t));
@@ -558,6 +534,7 @@ figure(1)
     ylabel(bar,'|H_{tot}| (A/m)');
     grid on   
 %     clim([0 2e-5]);
-    clim([0 0.02]);
+     clim([0 0.8]);
+     camup([0 -1 0]);
 
 end

@@ -28,11 +28,11 @@ function [param, grid, source] = import_model()
     M_y = 300;
     M_z = 300;
 
-    delta_x = 1.5e-3;
+    delta_x = 4e-3;
     delta_y = delta_x;
     delta_z = delta_x;
       
-    %Grid alignment behaviour
+    % Grid alignment behaviour
     grid_pause_on_unaligned = false;
     grid_error_tolerance = 1;
 
@@ -49,7 +49,8 @@ function [param, grid, source] = import_model()
     grid = ones(N{1},N{2},N{3});
 
 %====================MODEL SETUP====================%
-
+    
+    grid(:,:,:) = FREE_SPACE;
     grid = add_cuboid(grid,param.delta,unit,180,240,75,225,120,180,PEC);
   
 %====================SOURCE POSITION====================%

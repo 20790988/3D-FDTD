@@ -56,9 +56,10 @@ function [param, grid, source] = model_waveguide()
 
     grid = add_tube_z(grid,delta,3,48,3,18,0,M_z,PEC);
   
-%====================SOURCE POSITION====================%
+%====================SOURCE PROPERTIES====================%
 
     source.coord = m_to_n([5:delta_x:46],[5:delta_y:16],250,delta);
+    source.t_max = 0;
 
 %==================================================%
     if grid_max_error < grid_error_tolerance

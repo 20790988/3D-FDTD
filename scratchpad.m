@@ -1,10 +1,12 @@
 clear
 
-N = 12;
-
 fstart = 2e9;
-fstop = 4e9;
-fs = 8e9;
+fstop = 5e9;
+fstep = 0.1e9;
+
+fs = 4*fstop;
+
+N = fs/fstep;
 ts = 1/fs;
 T = (N-1)*ts;
 
@@ -16,7 +18,10 @@ fn = cos(n*2*pi*2e9/fs);
 
 % F_k = load('tempmat.mat').F_k;
 F_k = zeros(1,N);
+
 F_k(fstart/fs*N+1:fstop/fs*N+1) = 1;
+
+% F_k=normpdf(n/N*fs,(fstop-fstart)/2+fstart,(fstop-fstart)/2);
 
 %mirroring step
 F_k(N:-1:N/2+2) = F_k(2:N/2);
