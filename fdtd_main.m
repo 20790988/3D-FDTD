@@ -55,7 +55,7 @@ fprintf('Start\n')
     source_x = source_coords{1};
     source_y = source_coords{2};
     source_z = source_coords{3};
-    
+   
 %     source_val_x = source.value{1}((0:N_t_max)*delta_t);
 %     source_val_y = source.value{2}((0:N_t_max)*delta_t);
     source_val_z = source.value{3}((0:N_t_max)*delta_t);
@@ -111,6 +111,10 @@ Jsource_x = zeros(N_x,N_y,N_z);
 Jsource_y = zeros(N_x,N_y,N_z);
 Jsource_z = zeros(N_x,N_y,N_z);
 
+Msource_x = zeros(N_x,N_y,N_z);
+Msource_y = zeros(N_x,N_y,N_z);
+Msource_z = zeros(N_x,N_y,N_z);
+
 source_x = floor(source_x);
 source_y = floor(source_y);
 source_z = floor(source_z);
@@ -130,21 +134,31 @@ while stop_cond == false
     text_update(step,N_t_max,delta_t)
     
     if source_N_t_max == 0 || source_N_t_max>=step
-%         Ex_old(source_x,source_y,source_z) = source_val_x(step+1);
-%         Ey_old(source_x,source_y,source_z) = source_val_y(step+2);
-        Ez_old(source_x,source_y,source_z) = source_val_z(step+1);
+%         Hx_old(source_x,source_y,source_z) = 0;
+%         Hy_old(source_x,source_y,source_z) = 0;
+%         Hz_old(source_x,source_y,source_z) = 0;
+        Msource_x(source_x,source_y,source_z) = 0;
+        Msource_y(source_x,source_y,source_z) = source_val_z(step+1);
+        Msource_z(source_x,source_y,source_z) = 0;
+%         Ex_old(source_x,source_y,source_z) = 0;
+        Ey_old(source_x,source_y,source_z) = 0;
+        Ez_old(source_x,source_y,source_z) = 0;
+
+
     else
         temp = 0;
     end
 
     %====================PLOTTING START=====================%
-    if step>300
+    if  step>0
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
-        
-%         H_tot_line = (H_tot(:,N_y/2,N_z/2));
-%         plot_line(H_tot_line,delta_x*(1:N_x),step);
+% 
+%         tempz = floor(N_z/2);
+%         tempy = floor(N_y/2);
+%         H_tot_line = (H_tot(:,tempy,tempz));
+%         plot_line(H_tot_line,delta_x*(0:N_x-1),step);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
@@ -167,15 +181,18 @@ while stop_cond == false
       
     Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
-        + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk));
+        + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk) ...
+        - Msource_x(ii,jj,kk).*delta_x);
 
     Hy_new(ii,jj,kk) = D_a(ii,jj,kk).*Hy_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ez_old(ii+1,jj,kk)-Ez_old(ii,jj,kk) ...
-        + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1));
+        + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1) ...
+        - Msource_y(ii,jj,kk).*delta_x);
 
     Hz_new(ii,jj,kk) = D_a(ii,jj,kk).*Hz_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
-        + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk));
+        + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk) ...
+        - Msource_z(ii,jj,kk).*delta_x);
 
     % H-field increment
     Hx_old = Hx_new;
@@ -227,6 +244,7 @@ while stop_cond == false
         Ey_new, Ey_old);
     Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
         Ez_new, Ez_old);
+
 
     % E-field increment
     Ex_old_old = Ex_old;
@@ -455,34 +473,9 @@ function plot_line(field1,index,step)
     xlabel('x (m)');
     grid on   
 %     ylim([0 7e-5])
-    ylim([0 1.2]);
+%     ylim([0 1.2]);
 end
 
-function plot_field_slice(field,step)
-    
-    figure(1)
-    colormap jet
-    s = size(field);
-    field(s(1)+1,s(2)+1) = 0;
-    h = surf(field);
-
-%     view([0 0 1])
-    set(h,'edgecolor','none')
-
-    name = sprintf('n = %d',step);
-    title(name);
-    xlabel('x');
-    ylabel('y');
-   
-%     set(gca,'ColorScale','log')
-
-    bar = colorbar();
-    ylabel(bar,'|H_{tot}| (A/m)');
-        
-    grid on   
-    zlim([0 1]);
-    clim([0 1]);
-end
 
 function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t)
 
@@ -536,6 +529,6 @@ figure(1)
     ylabel(bar,'|H_{tot}| (A/m)');
     grid on   
 %     clim([0 2e-5]);
-     clim([0 0.8]);
+%      clim([0 0.8]);
 
 end
