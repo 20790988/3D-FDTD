@@ -1,7 +1,7 @@
 %
 %  3D-FDTD
 %  K Meyer
-%  2023-04-11
+%  2023-04-20
 % 
 
 clear
@@ -51,7 +51,7 @@ fprintf('Start\n')
 % Space around E-field in grid cells
     offset = 3;
 
-% Source (J) setup
+% Source plane
     source_coords = source.coord;
     sftf_x = source_coords{1};
     source_y = source_coords{2};
@@ -158,7 +158,7 @@ while stop_cond == false
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         H_tot_line = (H_tot(:,tempy,tempz));
-        plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
+%         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
 %         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
@@ -166,7 +166,7 @@ while stop_cond == false
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
-        plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2,1);
+%         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2,1);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -275,6 +275,9 @@ while stop_cond == false
     end
 
 end
+fprintf('Saving monitors...\n');
+
+save('monitor.mat','monitor_values');
 
 fprintf('Simulation end.\n');
 

@@ -25,7 +25,7 @@ function [param, grid, source, monitor] = model_waveguide()
     % Grid and cell size in units 
     unit = 1e-3;
 
-    M_x = 600;
+    M_x = 300;
     M_y = 50+40;
     M_z = 10+40+8;
 
@@ -70,10 +70,10 @@ function [param, grid, source, monitor] = model_waveguide()
     monitor(1).coords = m_to_n(26, 44, 26:delta_z:32, delta);
 
     monitor(2).name = 'port_2';
-    monitor(2).coords = m_to_n(580, 44, 26:delta_z:32, delta);
+    monitor(2).coords = m_to_n(270, 44, 26:delta_z:32, delta);
 
     monitor(3).name = 'port_ref';
-    monitor(3).coords = m_to_n(300, 44, 26:delta_z:32, delta);
+    monitor(3).coords = m_to_n(150, 44, 26:delta_z:32, delta);
 
 
 %==================================================%
