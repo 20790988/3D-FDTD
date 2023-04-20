@@ -41,13 +41,12 @@ fprintf('Start\n')
     delta_t = delta_x/(max(c)*sqrt(3));
     
 % Simulation length
-    
     N_t_max = floor(param.M_t_max/delta_t);
 
 % Fix sigma
     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
 
-% Space around E-field in grid
+% Space around E-field in grid cells
     offset = 3;
 
 % Source (J) setup
@@ -119,8 +118,12 @@ source_x = floor(source_x);
 source_y = floor(source_y);
 source_z = floor(source_z);
 
+tempE = load("tempE.mat").tempE;
+tempH = load("tempH.mat").tempH;
+
 step = 0;
 stop_cond = false;
+
 
 fprintf('Simulation start:\n  #Cells = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
     ,N_x*N_y*N_z,num2eng(delta_x),num2eng(delta_t))
@@ -134,31 +137,34 @@ while stop_cond == false
     text_update(step,N_t_max,delta_t)
     
     if source_N_t_max == 0 || source_N_t_max>=step
-%         Hx_old(source_x,source_y,source_z) = 0;
-%         Hy_old(source_x,source_y,source_z) = 0;
-%         Hz_old(source_x,source_y,source_z) = 0;
-        Msource_x(source_x,source_y,source_z) = 0;
-        Msource_y(source_x,source_y,source_z) = source_val_z(step+1);
-        Msource_z(source_x,source_y,source_z) = 0;
+%         Hx_old(source_x-1,source_y,source_z) = 0;
+%         Hy_old(source_x-1,source_y,source_z) = 0;
+%         Hz_old(source_x-1,source_y,source_z) = 0;
+% 
+%         Hx_old(source_x-2,source_y,source_z) = 0;
+%         Hy_old(source_x-2,source_y,source_z) = 0;
+%         Hz_old(source_x-2,source_y,source_z) = 0;
+
+%         Hy_old(source_x,source_y,source_z) = -Hy_old(source_x,source_y,source_z);
 %         Ex_old(source_x,source_y,source_z) = 0;
-        Ey_old(source_x,source_y,source_z) = 0;
-        Ez_old(source_x,source_y,source_z) = 0;
+%         Ey_old(source_x,source_y,source_z) = 0;
+%         Hy_old(source_x,source_y,source_z) = source_val_z(step+1);
+%         Hy_old(source_x,source_y,source_z) = source_val_z(step+1).*tempH;
+        Msource_y(source_x,source_y,source_z) = source_val_z(step+1);
+%         Ey_old(source_x,source_y,source_z) = source_val_z(step+1);
 
-
-    else
-        temp = 0;
     end
 
     %====================PLOTTING START=====================%
     if  step>0
         
-%         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
+        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
 % 
-%         tempz = floor(N_z/2);
-%         tempy = floor(N_y/2);
-%         H_tot_line = (H_tot(:,tempy,tempz));
-%         plot_line(H_tot_line,delta_x*(0:N_x-1),step);
+        tempz = floor(N_z/2);
+        tempy = floor(N_y/2);
+        H_tot_line = (H_tot(:,tempy,tempz));
+        plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
@@ -166,7 +172,7 @@ while stop_cond == false
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
-        plot_line(E_tot_line,delta_x*(0:N_x-1),step);
+        plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -193,7 +199,7 @@ while stop_cond == false
         + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
         + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk) ...
         - Msource_z(ii,jj,kk).*delta_x);
-
+   
     % H-field increment
     Hx_old = Hx_new;
     Hy_old = Hy_new;
@@ -460,26 +466,29 @@ function W_new_ = mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, ...
         + (c*delta_t*cos(a)-delta_x)/(c*delta_t*cos(a)+delta_x) ...
         *(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
 
-    end
+end
 
-function plot_line(field1,index,step)
-    figure(2)
+function plot_line(field1,index,step,y_text,fig_no,y_max)
+    figure(fig_no)
     field1 = reshape(field1,1,length(field1));
     plot(index,[field1]);
 
     name = sprintf('n = %d',step);
     title(name);
-    ylabel('|H_{tot}| (A/m)');
+    ylabel(y_text);
     xlabel('x (m)');
     grid on   
-%     ylim([0 7e-5])
-%     ylim([0 1.2]);
+
+if exist('y_max','var')
+     ylim([0 y_max]);
+end
+
 end
 
 
 function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t)
 
-figure(1)
+figure(3)
     colormap jet
     s = size(field);
     field(s(1)+1,s(2)+1,s(3)+1) = 0;
@@ -529,6 +538,6 @@ figure(1)
     ylabel(bar,'|H_{tot}| (A/m)');
     grid on   
 %     clim([0 2e-5]);
-%      clim([0 0.8]);
+     clim([0 1.2e-3]);
 
 end
