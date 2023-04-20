@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source] = model_waveguide;
+    [param, material, source, monitor] = model_waveguide;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -21,6 +21,8 @@ fprintf('Start\n')
     mu_0 = 1.2566e-6;
     mu_r = param.material(4,:);
     mu = mu_0*mu_r;
+
+    eta = max(sqrt(mu./epsilon));
 
 % Material at Border
     border_material_index = param.border_material_index;
@@ -51,13 +53,16 @@ fprintf('Start\n')
 
 % Source (J) setup
     source_coords = source.coord;
-    source_x = source_coords{1};
+    sftf_x = source_coords{1};
     source_y = source_coords{2};
     source_z = source_coords{3};
    
 %     source_val_x = source.value{1}((0:N_t_max)*delta_t);
 %     source_val_y = source.value{2}((0:N_t_max)*delta_t);
-    source_val_z = source.value{3}((0:N_t_max)*delta_t);
+    t = (0:N_t_max)*delta_t;
+    source_val_E = source.value{3}(t);
+    t = t+(-0.366*delta_t);
+    source_val_H = source.value{3}(t);
     
     source_N_t_max = floor(source.t_max/delta_t);
 
@@ -106,24 +111,28 @@ Hy_new = zeros(N_x,N_y,N_z);
 Hz_old = zeros(N_x,N_y,N_z);
 Hz_new = zeros(N_x,N_y,N_z);
 
-Jsource_x = zeros(N_x,N_y,N_z);
-Jsource_y = zeros(N_x,N_y,N_z);
-Jsource_z = zeros(N_x,N_y,N_z);
-
-Msource_x = zeros(N_x,N_y,N_z);
-Msource_y = zeros(N_x,N_y,N_z);
-Msource_z = zeros(N_x,N_y,N_z);
-
-source_x = floor(source_x);
+sftf_x = floor(sftf_x);
 source_y = floor(source_y);
 source_z = floor(source_z);
 
+Hz_inc = zeros(1,N_y,N_z);
+Hy_inc = zeros(1,N_y,N_z);
+Ey_inc = zeros(1,N_y,N_z);
+Ez_inc = zeros(1,N_y,N_z);
+
 tempE = load("tempE.mat").tempE;
 tempH = load("tempH.mat").tempH;
+    
+%monitors
+num_monitors = length(monitor);
+
+for num = 1:num_monitors
+    [iii,jjj,kkk] = unpack_coords(monitor(num).coords);   
+    monitor_values{num} = zeros(length(jjj),length(kkk),N_t_max);
+end
 
 step = 0;
 stop_cond = false;
-
 
 fprintf('Simulation start:\n  #Cells = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
     ,N_x*N_y*N_z,num2eng(delta_x),num2eng(delta_t))
@@ -133,46 +142,31 @@ fprintf(strcat(datestr(datetime( ...
 %====================LOOP START=====================%
 
 while stop_cond == false
+     text_update(step,N_t_max,delta_t)
 
-    text_update(step,N_t_max,delta_t)
-    
-    if source_N_t_max == 0 || source_N_t_max>=step
-%         Hx_old(source_x-1,source_y,source_z) = 0;
-%         Hy_old(source_x-1,source_y,source_z) = 0;
-%         Hz_old(source_x-1,source_y,source_z) = 0;
-% 
-%         Hx_old(source_x-2,source_y,source_z) = 0;
-%         Hy_old(source_x-2,source_y,source_z) = 0;
-%         Hz_old(source_x-2,source_y,source_z) = 0;
 
-%         Hy_old(source_x,source_y,source_z) = -Hy_old(source_x,source_y,source_z);
-%         Ex_old(source_x,source_y,source_z) = 0;
-%         Ey_old(source_x,source_y,source_z) = 0;
-%         Hy_old(source_x,source_y,source_z) = source_val_z(step+1);
-%         Hy_old(source_x,source_y,source_z) = source_val_z(step+1).*tempH;
-        Msource_y(source_x,source_y,source_z) = source_val_z(step+1);
-%         Ey_old(source_x,source_y,source_z) = source_val_z(step+1);
+    Ez_inc(1,source_y,source_z) = -source_val_E(step+1);
+    Hy_inc(1,source_y,source_z) = source_val_H(step+1)./eta;
 
-    end
-
+  
     %====================PLOTTING START=====================%
     if  step>0
         
         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
-% 
+
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         H_tot_line = (H_tot(:,tempy,tempz));
-        plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1);
+        plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
-% %       
+%         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
+
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
-        plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
+        plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2,1);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -187,19 +181,21 @@ while stop_cond == false
       
     Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
-        + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk) ...
-        - Msource_x(ii,jj,kk).*delta_x);
+        + Ez_old(ii,jj,kk) - Ez_old(ii,jj+1,kk));
 
     Hy_new(ii,jj,kk) = D_a(ii,jj,kk).*Hy_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ez_old(ii+1,jj,kk)-Ez_old(ii,jj,kk) ...
-        + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1) ...
-        - Msource_y(ii,jj,kk).*delta_x);
+        + Ex_old(ii,jj,kk) - Ex_old(ii,jj,kk+1));
 
     Hz_new(ii,jj,kk) = D_a(ii,jj,kk).*Hz_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
-        + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk) ...
-        - Msource_z(ii,jj,kk).*delta_x);
+        + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk));
    
+    Hz_new(sftf_x,jj,kk) = Hz_new(sftf_x,jj,kk) ...
+        + D_b(sftf_x,jj,kk).*Ey_inc(1,jj,kk);
+    Hy_new(sftf_x,jj,kk) = Hy_new(sftf_x,jj,kk) ...
+        - D_b(sftf_x,jj,kk).*Ez_inc(1,jj,kk);
+
     % H-field increment
     Hx_old = Hx_new;
     Hy_old = Hy_new;
@@ -214,19 +210,21 @@ while stop_cond == false
 
     Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
-        + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk) ...
-        + Jsource_x(ii,jj,kk).*delta_x);
+        + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk));
 
     Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
-        + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk) ...
-        + Jsource_y(ii,jj,kk).*delta_x);
+        + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk));
 
     Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
         + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
-        + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk) ...
-        + Jsource_z(ii,jj,kk).*delta_x);
-
+        + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk));
+    
+    Ey_new(sftf_x,jj,kk) = Ey_new(sftf_x,jj,kk) ...
+        + C_b(sftf_x,jj,kk).*Hz_inc(1,jj,kk);
+    Ez_new(sftf_x,jj,kk) = Ez_new(sftf_x,jj,kk) ...
+        - C_b(sftf_x,jj,kk).*Hy_inc(1,jj,kk);
+    
     % apply PEC: set E-fields to zero in PEC region
     Ex_new = Ex_new.*pec_mask;
     Ey_new = Ey_new.*pec_mask;
@@ -261,6 +259,16 @@ while stop_cond == false
     Ey_old = Ey_new;
     Ez_old = Ez_new;
     
+    E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
+
+    %store values to monitors
+    for num = 1:num_monitors
+        [iii,jjj,kkk] = unpack_coords(monitor(num).coords);
+        monitor_values{num}(:,:,step+1) = E_tot(iii,jjj,kkk);
+    end
+
+
+
     step = step+1;
     if step >= N_t_max
         stop_cond = true;
@@ -319,6 +327,7 @@ function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, offset, W_new, W
         N_z-nfs, N_z, ii, jj, W_new, W_old, W_old_old);
 end
 
+
 function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
     W_new, W_old, W_old_old)
     
@@ -330,6 +339,11 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         i1 = i0-1;
     end
     
+    coeffs = [-1 ...
+        (c*delta_t-delta)/(c*delta_t+delta) ...
+        (2*delta)/(c*delta_t+delta) ...
+        (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
+
     iii = {i1, ...
         i1,i0, ...
         i0,i1, ...
@@ -345,6 +359,7 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
 
     if boundary == 'x'
         %default
+        coeffs(4) = 0;
     elseif boundary == 'y'
         tempi = iii;
         tempj = jjj;
@@ -361,10 +376,7 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         kkk = tempi;
     end
        
-    coeffs = [-1 ...
-        (c*delta_t-delta)/(c*delta_t+delta) ...
-        (2*delta)/(c*delta_t+delta) ...
-        (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
+    
 
     W_new_ = coeffs(1)* W_old_old(iii{1},jjj{1},kkk{1}) ...
         +coeffs(2)* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
@@ -538,6 +550,6 @@ figure(3)
     ylabel(bar,'|H_{tot}| (A/m)');
     grid on   
 %     clim([0 2e-5]);
-     clim([0 1.2e-3]);
+     clim([0 0.8]);
 
 end

@@ -1,4 +1,4 @@
-function [param, grid, source] = model_waveguide()
+function [param, grid, source, monitor] = model_waveguide()
     
     param = struct('material',0);
     source = struct('coord',0);
@@ -55,15 +55,26 @@ function [param, grid, source] = model_waveguide()
     
     grid(:,:,:) = FREE_SPACE;
     ofs = 20;
-    grid = add_cuboid(grid,delta,ofs,M_x-ofs,ofs,M_y-ofs,20,24,PEC);
-    grid = add_cuboid(grid,delta,ofs,M_x-ofs,ofs,M_y-ofs,34,38,PEC);
-    grid = add_cuboid(grid,delta,302,304,20,70,26,32,PEC);
+    grid = add_cuboid(grid,delta,0,M_x,ofs,M_y-ofs,20,24,PEC);
+    grid = add_cuboid(grid,delta,0,M_x,ofs,M_y-ofs,34,38,PEC);
   
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
    
-    source.coord = m_to_n(300, 20:delta_y:70, 26:delta_z:32, delta);
+    source.coord = m_to_n(30, 20:delta_y:70, 26:delta_z:32, delta);
+
 %     source.t_max = 0.6e-9;
+
+%====================MONITOR SETUP====================%
+    monitor(1).name = 'port_1';
+    monitor(1).coords = m_to_n(26, 44, 26:delta_z:32, delta);
+
+    monitor(2).name = 'port_2';
+    monitor(2).coords = m_to_n(580, 44, 26:delta_z:32, delta);
+
+    monitor(3).name = 'port_ref';
+    monitor(3).coords = m_to_n(300, 44, 26:delta_z:32, delta);
+
 
 %==================================================%
 
@@ -86,8 +97,12 @@ function source_signal = source_func(t)
     t0 = 0.3e-9;
     T = 7.7032e-11;
     source_signal = exp(-(t-t0).^2./(T^2));
+
 %     t = t-0.4e-9;
 %     source_signal = gauspuls(t,4e9,1);
+
+%     f = 5e9;
+%     source_signal = sin(2*pi*f*t);
 end
 %==================================================%
 
@@ -128,7 +143,7 @@ end
 function result = is_int(num)
     global grid_error_tolerance grid_max_error
     fl = floor(num);
-    diff = abs(fl-num);
+    diff = max(abs(fl-num));
     result = true;
     if (diff>grid_error_tolerance)
         result = false;
