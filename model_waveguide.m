@@ -38,7 +38,7 @@ function [param, grid, source, monitor] = model_waveguide()
     grid_error_tolerance = 0.5;
 
     % Simulation length in seconds
-    param.M_t_max = 2e-9;
+    param.M_t_max = 3e-9;
     
 %============================================================%
 
@@ -63,7 +63,7 @@ function [param, grid, source, monitor] = model_waveguide()
    
     source.coord = m_to_n(30, 20:delta_y:70, 26:delta_z:32, delta);
 
-%     source.t_max = 0.6e-9;
+    source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
     monitor(1).name = 'port_1';
@@ -94,12 +94,12 @@ end
 
 %====================SOURCE SIGNAL====================%
 function source_signal = source_func(t)
-    t0 = 0.3e-9;
-    T = 7.7032e-11;
-    source_signal = exp(-(t-t0).^2./(T^2));
+%     t0 = 0.3e-9;
+%     T = 7.7032e-11;
+%     source_signal = exp(-(t-t0).^2./(T^2));
 
-%     t = t-0.4e-9;
-%     source_signal = gauspuls(t,4e9,1);
+    t = t-0.4e-9;
+    source_signal = gauspuls(t,4e9,1);
 
 %     f = 5e9;
 %     source_signal = sin(2*pi*f*t);

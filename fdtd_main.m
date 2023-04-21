@@ -56,6 +56,10 @@ fprintf('Start\n')
     sftf_x = source_coords{1};
     source_y = source_coords{2};
     source_z = source_coords{3};
+
+    bootstrap = load("bootstrap.mat");
+    bs_E = bootstrap.bs_Ez;
+    bs_H = bootstrap.bs_Hy;
    
 %     source_val_x = source.value{1}((0:N_t_max)*delta_t);
 %     source_val_y = source.value{2}((0:N_t_max)*delta_t);
@@ -119,10 +123,7 @@ Hz_inc = zeros(1,N_y,N_z);
 Hy_inc = zeros(1,N_y,N_z);
 Ey_inc = zeros(1,N_y,N_z);
 Ez_inc = zeros(1,N_y,N_z);
-
-tempE = load("tempE.mat").tempE;
-tempH = load("tempH.mat").tempH;
-    
+  
 %monitors
 num_monitors = length(monitor);
 
@@ -144,9 +145,9 @@ fprintf(strcat(datestr(datetime( ...
 while stop_cond == false
      text_update(step,N_t_max,delta_t)
 
-
-    Ez_inc(1,source_y,source_z) = -source_val_E(step+1);
-    Hy_inc(1,source_y,source_z) = source_val_H(step+1)./eta;
+   
+    Ez_inc(1,:,:) = (-source_val_E(step+1)).*bs_E;
+    Hy_inc(1,:,:) = (source_val_H(step+1)).*bs_E./eta;
 
   
     %====================PLOTTING START=====================%
@@ -161,7 +162,7 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-%         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
+        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
 
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
@@ -259,12 +260,12 @@ while stop_cond == false
     Ey_old = Ey_new;
     Ez_old = Ez_new;
     
-    E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
+%     E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
 
     %store values to monitors
     for num = 1:num_monitors
         [iii,jjj,kkk] = unpack_coords(monitor(num).coords);
-        monitor_values{num}(:,:,step+1) = E_tot(iii,jjj,kkk);
+        monitor_values{num}(:,:,step+1) = Ez_old(iii,jjj,kkk);
     end
 
 

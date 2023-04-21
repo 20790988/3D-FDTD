@@ -46,7 +46,7 @@ f_t = gauspuls(t,4e9,1);
 
 time_plot(t/1e-9,f_t,'t (ns)',1);
 
-mag_phase_plot((0:518)/1000/delta_t/1e9,fft(f_t),'f (GHz)',2)
+mag_phase_plot((0:518)/518/delta_t/1e9,fft(f_t),'f (GHz)',3)
 
 function mag_phase_plot(x,f_x,x_text,fig_no)
     figure(fig_no);
