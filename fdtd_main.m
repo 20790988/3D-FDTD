@@ -146,8 +146,8 @@ while stop_cond == false
      text_update(step,N_t_max,delta_t)
 
    
-    Ez_inc(1,:,:) = (-source_val_E(step+1)).*bs_E;
-    Hy_inc(1,:,:) = (source_val_H(step+1)).*bs_E./eta;
+    Ez_inc(1,source_y,source_z) = (-source_val_E(step+1));
+    Hy_inc(1,source_y,source_z) = (source_val_H(step+1))/eta;
 
   
     %====================PLOTTING START=====================%
@@ -162,12 +162,12 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
+%         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t,1800);
 
         tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
-%         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2,1);
+%         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -363,7 +363,7 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
 
     if boundary == 'x'
         %default
-        coeffs(4) = 0;
+        
     elseif boundary == 'y'
         tempi = iii;
         tempj = jjj;
@@ -379,7 +379,7 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         jjj = tempk;
         kkk = tempi;
     end
-       
+       coeffs(4) = 0;
     
 
     W_new_ = coeffs(1)* W_old_old(iii{1},jjj{1},kkk{1}) ...
@@ -502,7 +502,7 @@ end
 end
 
 
-function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t)
+function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t,c_max)
 
 figure(3)
     colormap jet
@@ -553,7 +553,8 @@ figure(3)
     bar = colorbar();
     ylabel(bar,'|H_{tot}| (A/m)');
     grid on   
-%     clim([0 2e-5]);
-     clim([0 0.8]);
+if exist('c_max','var')
+     clim([0 c_max]);
+end
 
 end
