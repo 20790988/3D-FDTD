@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = model_waveguide;
+    [param, material, source, monitor] = model_waveguide_dielectric;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -22,7 +22,7 @@ fprintf('Start\n')
     mu_r = param.material(4,:);
     mu = mu_0*mu_r;
 
-    eta = max(sqrt(mu./epsilon));
+   
 
 % Material at Border
     border_material_index = param.border_material_index;
@@ -57,17 +57,24 @@ fprintf('Start\n')
     source_y = source_coords{2};
     source_z = source_coords{3};
 
-    bootstrap = load("bootstrap.mat");
-    bs_E = bootstrap.bs_Ez;
-    bs_H = bootstrap.bs_Hy;
-   
+%     bootstrap = load("bootstrap.mat");
+%     bs_E = bootstrap.tempE;
+%     bs_E = bs_E./bs_E(1,N_y/2-0.5,N_z/2-0.5);
+% 
+%     bs_H = bootstrap.tempH;
+%     bs_H = bs_H./bs_H(1,N_y/2-0.5,N_z/2-0.5);
+
+
 %     source_val_x = source.value{1}((0:N_t_max)*delta_t);
 %     source_val_y = source.value{2}((0:N_t_max)*delta_t);
+
     t = (0:N_t_max)*delta_t;
-    source_val_E = source.value{3}(t);
-    t = t+(-0.366*delta_t);
-    source_val_H = source.value{3}(t);
-    
+    [source_val_E,source_val_H] = source.value{3}(t,delta_t);
+
+    figure(1);
+    plot(t,source_val_E),
+    clf;
+
     source_N_t_max = floor(source.t_max/delta_t);
 
 %====================SIMULATION SETUP AND INITIALISE=====================%
@@ -146,12 +153,12 @@ while stop_cond == false
      text_update(step,N_t_max,delta_t)
 
    
-    Ez_inc(1,source_y,source_z) = (-source_val_E(step+1));
-    Hy_inc(1,source_y,source_z) = (source_val_H(step+1))/eta;
+    Ez_inc(1,source_y,source_z) = (source_val_E(step+1));
+    Hy_inc(1,source_y,source_z) = (source_val_H(step+1));
 
   
     %====================PLOTTING START=====================%
-    if  step>0
+    if  step<0
         
         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %         plot_field(H_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
@@ -162,12 +169,13 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-%         plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t,1800);
+%         plot_field(E_tot,N_x/2,N_y/2,7,step,delta,delta_t,300);
+%         view([0 0 1])
 
-        tempz = floor(N_z/2);
+        tempz = floor(7);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
-%         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
+        plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -345,8 +353,8 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
     
     coeffs = [-1 ...
         (c*delta_t-delta)/(c*delta_t+delta) ...
-        (2*delta)/(c*delta_t+delta) ...
-        (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
+        (2*delta)/(c*delta_t+delta)];
+%         (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
 
     iii = {i1, ...
         i1,i0, ...
@@ -384,10 +392,10 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
 
     W_new_ = coeffs(1)* W_old_old(iii{1},jjj{1},kkk{1}) ...
         +coeffs(2)* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
-        +coeffs(3)* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5})) ...
-        +coeffs(4)* (W_old(iii{6},jjj{6},kkk{6}) -4*W_old(iii{7},jjj{7},kkk{7}) +W_old(iii{8},jjj{8},kkk{8}) ...
-        +W_old(iii{9},jjj{9},kkk{9}) -4*W_old(iii{10},jjj{10},kkk{10}) +W_old(iii{11},jjj{11},kkk{11})...
-        +W_old(iii{12},jjj{12},kkk{12}) +W_old(iii{13},jjj{13},kkk{13}) +W_old(iii{14},jjj{14},kkk{14}) +W_old(iii{15},jjj{15},kkk{15}));
+        +coeffs(3)* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5}));
+%         +coeffs(4)* (W_old(iii{6},jjj{6},kkk{6}) -4*W_old(iii{7},jjj{7},kkk{7}) +W_old(iii{8},jjj{8},kkk{8}) ...
+%         +W_old(iii{9},jjj{9},kkk{9}) -4*W_old(iii{10},jjj{10},kkk{10}) +W_old(iii{11},jjj{11},kkk{11})...
+%         +W_old(iii{12},jjj{12},kkk{12}) +W_old(iii{13},jjj{13},kkk{13}) +W_old(iii{14},jjj{14},kkk{14}) +W_old(iii{15},jjj{15},kkk{15}));
 end
 
 function W_new_ = mur_abc_plane_with_permute(boundary, c, delta_t, delta, ii, N, jj, kk, W_new, W_old, W_old_old)

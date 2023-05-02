@@ -4,7 +4,7 @@ function [param, grid, source, monitor] = model_waveguide()
     source = struct('coord',0);
     source.t_max = 0;
     source.value = {0,0,@source_func};
-    
+       
     global grid_pause_on_unaligned grid_error_tolerance grid_max_error
     global floor_tolerance
     floor_tolerance = 1e-9;
@@ -27,25 +27,22 @@ function [param, grid, source, monitor] = model_waveguide()
     % Cell size in units 
     unit = 1e-3;
     
-    delta_x = 0.1;
+    delta_x = 0.06;
     delta_y = delta_x;
     delta_z = delta_x;
     
     %Grid size and variables
-    w = 0.6;
-    th = 0.2;
-    port_offset = 2;
 
-    M_x = 10;
-    M_y = 6;
-    M_z = 6;
-    
+    M_x = 13.38;
+    M_y = 6.96;
+    M_z = 2.4;
+
     % Grid alignment behaviour
     grid_pause_on_unaligned = true;
     grid_error_tolerance = 0.5;
 
     % Simulation length in seconds
-    param.M_t_max = 200e-12;
+    param.M_t_max = 0.8e-9;
     
 %============================================================%
 
@@ -53,53 +50,48 @@ function [param, grid, source, monitor] = model_waveguide()
     delta = {delta_x,delta_y,delta_z};
     param.delta = {delta_x*unit,delta_y*unit,delta_z*unit};
 
-    N = m_to_n(M_x,M_y,M_z,delta);   
+    N = m_to_n(M_x,M_y,M_z,delta,{0,0,0});   
     param.N = {N{1},N{2},N{3}};
 
     grid = ones(N{1},N{2},N{3});
-
+    
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
+    
+    origin = {1.98,M_y/2,0.12};
 
+    %conductor
+     grid = add_cuboid(grid,delta,-1.98,7.2, ...
+        -0.3,0.3, ...
+        0.6,0.72, ...
+        PEC, ...
+        origin);
 
+    %ground plane
     grid = add_cuboid(grid,delta,0,M_x, ...
-        M_y/2-w/2,M_y/2+w/2, ...
-        M_z/2-w/2-th,M_z/2-w/2, ...
-        PEC);
+        0,M_y, ...
+        0,0.12, ...
+        PEC, ...
+        {0,0,0});
 
-
-    grid = add_cuboid(grid,delta,0,M_x, ...
-        M_y/2-w/2,M_y/2+w/2, ...
-        M_z/2+w/2+th+0.1,M_z/2+w/2+0.1, ...
-        PEC);
-
-%     grid = add_cuboid(grid,delta,0,M_x, ...
-%         M_y/2-w/2,M_y/2+w/2, ...
-%         2.8,3.3, ...
-%         DIELECTRIC);
+grid = add_cuboid(grid,delta,-1.98,M_x-1.98, ...
+        -M_y/2,M_y/2, ...
+        0.06,0.54, ...
+        DIELECTRIC, ...
+        origin);
   
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
    
-    source.coord = m_to_n(port_offset, 2.8:delta_y:3.3, 2.8:delta_z:3.3, delta);
+    source.coord = m_to_n(0, -0.3:delta_y:0.3, 0.06:delta_z:0.54, delta, origin);
 
 %     source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
-%     monitor(1).name = 'port_1';
-%     monitor(1).coords = m_to_n(port_offset-1, M_y/2, 2.8:delta_z:3.3, delta);
-% 
-%     monitor(2).name = 'port_2';
-%     monitor(2).coords = m_to_n(port_offset, M_y/2, 2.8:delta_z:3.3, delta);
-% 
-%     monitor(3).name = 'port_ref';
-%     monitor(3).coords = m_to_n(port_offset+2, M_y/2, 2.8:delta_z:3.3, delta);
-
-
-    for ii = 1:(M_x-1)
+    for ii = 1:7
         str = sprintf('port_%d',ii);
         monitor(ii).name = str;
-        monitor(ii).coords = m_to_n(ii, M_y/2, 2.8:delta_z:3.3, delta);
+        monitor(ii).coords = m_to_n(ii*0.96, M_y/2, 0.12:delta_z:0.72, delta,{0,0,0});
     end
    
 %==================================================%
@@ -119,21 +111,29 @@ function [param, grid, source, monitor] = model_waveguide()
 end
 
 %====================SOURCE SIGNAL====================%
-function source_signal = source_func(t)
-%     t0 = 0.3e-9;
-%     T = 7.7032e-11;
-%     source_signal = exp(-(t-t0).^2./(T^2));
+function [source_signal_E,source_signal_H] = source_func(t,delta_t)
 
-    t = t-60e-12;
+
+    epsilon_0 = 8.8542e-12;
+    mu_0 = 1.2566e-6;
+    e_eff = 6.493;
+    eta = sqrt(mu_0./(epsilon_0*e_eff));
     a = 1/(0.6e-3);
-    source_signal = gauspuls(t,25e9,1)*a;
 
-%     f = 5e9;pack
-%     source_signal = sin(2*pi*f*t);
+    t0 = 36e-12;
+    T = 4.115e-12;
+    source_signal_E = -exp(-(t-t0).^2./(T^2))*a;
+    source_signal_H = exp(-(t-t0).^2./(T^2))*a/eta;
+
+%     t = t-35e-12;
+%     source_signal_E = -gauspuls(t,40e9,1)*a;
+%     
+%     t = t-(0.366*delta_t);
+%     source_signal_H = gauspuls(t,40e9,1)*a/eta;
 end
 %==================================================%
 
-function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material)
+function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material,relative_to)
     
     if xmin>xmax
         [xmin,xmax] = swop(xmin,xmax);
@@ -146,9 +146,9 @@ function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material)
     if zmin>zmax
         [zmin,zmax] = swop(zmin,zmax);
     end
-
-    min = m_to_n(xmin,ymin,zmin,delta);
-    max = m_to_n(xmax,ymax,zmax,delta);
+      
+    min = m_to_n(xmin,ymin,zmin,delta,relative_to);
+    max = m_to_n(xmax,ymax,zmax,delta,relative_to);
 
     grid(min{1}:max{1},min{2}:max{2},min{3}:max{3}) = material;
 
@@ -167,11 +167,11 @@ function grid = add_tube(grid,delta,direction,xmin,xmax,ymin,ymax,zmin,zmax,mate
 end
 
 
-function point = m_to_n(x,y,z,delta)
-  
-    ii = x/delta{1}+1;
-    jj = y/delta{2}+1;
-    kk = z/delta{3}+1;
+function point = m_to_n(x,y,z,delta,relative_to)
+      
+    ii = (x+relative_to{1})/delta{1}+1;
+    jj = (y+relative_to{2})/delta{2}+1;
+    kk = (z+relative_to{3})/delta{3}+1;
     if (~is_int(ii) || ~is_int(jj) || ~is_int(kk))
         fprintf('Gridding error at dimension\n%.3e %.3e %.3e\n',x,y,z);
     end
