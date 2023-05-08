@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = model_waveguide_dielectric;
+    [param, material, source, monitor] = t_wave_guide;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -135,8 +135,19 @@ Ez_inc = zeros(1,N_y,N_z);
 num_monitors = length(monitor);
 
 for num = 1:num_monitors
-    [iii,jjj,kkk] = unpack_coords(monitor(num).coords);   
-    monitor_values{num} = zeros(length(jjj),length(kkk),N_t_max);
+    [iii,jjj,kkk] = unpack_coords(monitor(num).coords);
+    if monitor(num).normal_direction == 1
+        rows = length(jjj);
+        cols = length(kkk);
+    elseif monitor(num).normal_direction == 2
+        rows = length(iii);
+        cols = length(kkk);
+    else
+        rows = length(iii);
+        cols = length(jjj);
+    end
+    monitor_values{num} = zeros(rows,cols,N_t_max);
+    monitor_names{num} = monitor(num).name;
 end
 
 step = 0;
@@ -150,7 +161,7 @@ fprintf(strcat(datestr(datetime( ...
 %====================LOOP START=====================%
 
 while stop_cond == false
-     text_update(step,N_t_max,delta_t)
+    text_update(step,N_t_max,delta_t)
 
    
     Ez_inc(1,source_y,source_z) = (source_val_E(step+1));
@@ -169,13 +180,13 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-%         plot_field(E_tot,N_x/2,N_y/2,7,step,delta,delta_t,300);
-%         view([0 0 1])
+        plot_field(E_tot,[],[],7,step,delta,delta_t,500);
+        view([0 0 1])
 
         tempz = floor(7);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
-        plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
+%         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
         temp = 0;
     end
     %====================PLOTTING END=====================%
@@ -240,7 +251,7 @@ while stop_cond == false
     Ez_new = Ez_new.*pec_mask;
 
     % E-field Boundary Conditions
-    c_ = c(border_material_index);   
+    c_ = c(material);   
     
     bc_offset = 2;
 
@@ -272,11 +283,15 @@ while stop_cond == false
 
     %store values to monitors
     for num = 1:num_monitors
+%         num
         [iii,jjj,kkk] = unpack_coords(monitor(num).coords);
+%         iii
+%         jjj
+%         kkk
+%         monitor_values{num}(:,:,step+1)
         monitor_values{num}(:,:,step+1) = Ez_old(iii,jjj,kkk);
+%         monitor_values{num}(:,:,step+1)
     end
-
-
 
     step = step+1;
     if step >= N_t_max
@@ -286,7 +301,7 @@ while stop_cond == false
 end
 fprintf('Saving monitors...\n');
 
-save('monitor.mat','monitor_values');
+save('monitor.mat','monitor_values','monitor_names','delta_t','delta_z');
 
 fprintf('Simulation end.\n');
 
@@ -294,13 +309,24 @@ fprintf('Simulation end.\n');
 
 function text_update(step,N_t_max,delta_t)
    persistent reverseStr;
-   if step == 0 
+   persistent time_per_iteration;
+   persistent time_estimate;
+
+   if step == 0
+       tic;
        reverseStr = '';
+       time_per_iteration = 1;
+   end
+   time_per_iteration = time_per_iteration*0.7+0.3*toc;
+   
+   if mod(step,10) == 0 && step ~=0
+       time_estimate = ceil((N_t_max-step)*time_per_iteration/60);
    end
 
-   msg = sprintf('Step %d/%d  t = %s s\n', step, N_t_max, num2eng(delta_t*step));
-   fprintf([reverseStr, msg]);
+   msg = sprintf('Step %d/%d  t = %s s\nEst. time remaining %d mins', step, N_t_max, num2eng(delta_t*step),time_estimate);
+    fprintf([reverseStr, msg]);
    reverseStr = repmat(sprintf('\b'), 1, length(msg));
+   tic;
 end
 
 function [ii_,jj_,kk_] = unpack_coords(coord)
@@ -351,23 +377,15 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         i1 = i0-1;
     end
     
-    coeffs = [-1 ...
-        (c*delta_t-delta)/(c*delta_t+delta) ...
-        (2*delta)/(c*delta_t+delta)];
-%         (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
-
     iii = {i1, ...
         i1,i0, ...
-        i0,i1, ...
-        i0,i0,i0,i1,i1,i1,i0,i0,i1,i1}; 
+        i0,i1};
     jjj = {jj, ...
         jj,jj, ...
-        jj,jj, ...
-        jj+1,jj,jj-1,jj+1,jj,jj-1,jj,jj,jj,jj}; 
+        jj,jj};
     kkk = {kk, ...
         kk,kk, ...
-        kk,kk, ...
-        kk,kk,kk,kk,kk,kk,kk+1,kk-1,kk+1,kk-1}; 
+        kk,kk};
 
     if boundary == 'x'
         %default
@@ -387,58 +405,16 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         jjj = tempk;
         kkk = tempi;
     end
-       coeffs(4) = 0;
     
+    c_ = c(iii{1},jjj{1},kkk{1});
 
-    W_new_ = coeffs(1)* W_old_old(iii{1},jjj{1},kkk{1}) ...
-        +coeffs(2)* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
-        +coeffs(3)* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5}));
-%         +coeffs(4)* (W_old(iii{6},jjj{6},kkk{6}) -4*W_old(iii{7},jjj{7},kkk{7}) +W_old(iii{8},jjj{8},kkk{8}) ...
-%         +W_old(iii{9},jjj{9},kkk{9}) -4*W_old(iii{10},jjj{10},kkk{10}) +W_old(iii{11},jjj{11},kkk{11})...
-%         +W_old(iii{12},jjj{12},kkk{12}) +W_old(iii{13},jjj{13},kkk{13}) +W_old(iii{14},jjj{14},kkk{14}) +W_old(iii{15},jjj{15},kkk{15}));
-end
+    coeffs_1 = -1;
+    coeffs_2 = (c_*delta_t-delta)./(c_*delta_t+delta);
+    coeffs_3 = (2*delta)./(c_*delta_t+delta);
 
-function W_new_ = mur_abc_plane_with_permute(boundary, c, delta_t, delta, ii, N, jj, kk, W_new, W_old, W_old_old)
-    
-    i0 = ii;
-
-    if ii < N/2
-        i1 = i0+1;
-    else
-        i1 = i0-1;
-    end
-
-    if boundary == 'x'
-        %default
-    elseif boundary == 'y'
-        W_new = permute(W_new,[2 1 3]);
-        W_old = permute(W_old,[2 1 3]);
-        W_old_old = permute(W_old_old,[2 1 3]);
-    elseif boundary == 'z'
-        W_new = permute(W_new,[3 2 1]);
-        W_old = permute(W_old,[3 2 1]);
-        W_old_old = permute(W_old_old,[3 2 1]);
-    end
-    
-    coeffs = [-1 ...
-        (c*delta_t-delta)/(c*delta_t+delta) ...
-        (2*delta)/(c*delta_t+delta) ...
-        (c*delta_t).^2/(2*delta*(c*delta_t+delta))];
-
-    W_new_ = coeffs(1)* W_old_old(i1,jj,kk) ...
-        +coeffs(2)* (W_new(i1,jj,kk)+W_old_old(i0,jj,kk)) ...
-        +coeffs(3)* (W_old(i0,jj,kk)+W_old(i1,jj,kk)) ...
-        +coeffs(4)* (W_old(i0,jj+1,kk) -4*W_old(i0,jj,kk) +W_old(i0,jj-1,kk) ...
-        +W_old(i1,jj+1,kk) -4*W_old(i1,jj,kk) +W_old(i1,jj-1,kk)...
-        +W_old(i0,jj,kk+1) +W_old(i0,jj,kk-1) +W_old(i1,jj,kk+1) +W_old(i1,jj,kk-1));
-
-    if boundary == 'x'
-        %default
-    elseif boundary == 'y'
-        W_new_ = permute(W_new_,[2 1 3]);       
-    elseif boundary == 'z'
-        W_new_ = permute(W_new_,[3 2 1]);
-    end
+    W_new_ = coeffs_1.* W_old_old(iii{1},jjj{1},kkk{1}) ...
+        +coeffs_2.* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
+        +coeffs_3.* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5}));
 end
 
 function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, ...
@@ -482,13 +458,15 @@ end
 
 function W_new_ = mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, ...
     W_new, W_old)
-
+   
     [ii_0,jj_0,kk_0] = unpack_coords(coords_0);
     [ii_1,jj_1,kk_1] = unpack_coords(coords_1);
 
+    c_ = c(ii_0,jj_0,kk_0);
+        
     W_new_ = W_old(ii_1,jj_1,kk_1) ...
-        + (c*delta_t*cos(a)-delta_x)/(c*delta_t*cos(a)+delta_x) ...
-        *(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
+        + (c_*delta_t*cos(a)-delta_x)./(c_*delta_t*cos(a)+delta_x) ...
+        .*(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
 
 end
 

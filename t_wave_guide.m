@@ -27,22 +27,26 @@ function [param, grid, source, monitor] = model_waveguide()
     % Cell size in units 
     unit = 1e-3;
     
-    delta_x = 0.06;
+    delta_x = 0.1;
     delta_y = delta_x;
     delta_z = delta_x;
     
     %Grid size and variables
 
-    M_x = 13.38;
-    M_y = 14.4;
+    w_ = 0.6;
+    l_ = 15.2;
+
+    M_x = l_+l_/2;
+    M_y = l_*2;
     M_z = 2.4;
+    
 
     % Grid alignment behaviour
     grid_pause_on_unaligned = true;
     grid_error_tolerance = 0.5;
 
     % Simulation length in seconds
-    param.M_t_max = 3e-10;
+    param.M_t_max = 1e-9;
     
 %============================================================%
 
@@ -58,40 +62,65 @@ function [param, grid, source, monitor] = model_waveguide()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {1.98,M_y/2,0.12};
+    origin = {0,M_y/2,0};
 
-    %conductor
-     grid = add_cuboid(grid,delta,-1.98,7.2, ...
-        -0.3,0.3, ...
-        0.6,0.72, ...
+    %conductor1
+     grid = add_cuboid(grid,delta,0,l_, ...
+        -w_/2,w_/2, ...
+        0.9,1.1, ...
+        PEC, ...
+        origin);
+
+      %conductor23
+     grid = add_cuboid(grid,delta,l_,l_-w_, ...
+        -M_y/2,M_y/2, ...
+        0.9,1.1, ...
         PEC, ...
         origin);
 
     %ground plane
     grid = add_cuboid(grid,delta,0,M_x, ...
-        0,M_y, ...
-        0,0.12, ...
-        PEC, ...
-        {0,0,0});
-
-grid = add_cuboid(grid,delta,-1.98,M_x-1.98, ...
         -M_y/2,M_y/2, ...
-        0.06,0.54, ...
+        0,0.2, ...
+        PEC, ...
+        origin);
+
+    %dielectric
+    grid = add_cuboid(grid,delta,0,M_x, ...
+        -M_y/2,M_y/2, ...
+        0.3,0.8, ...
         DIELECTRIC, ...
         origin);
   
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
    
-    source.coord = m_to_n(0, -0.3:delta_y:0.3, 0.06:delta_z:0.54, delta, origin);
+    source.coord = m_to_n(7, -0.3:delta_y:0.3, 0.3:delta_z:0.8, delta, origin);
 
 %     source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
-    for ii = 1:7
-        str = sprintf('port_%d',ii);
+    N_temp = 14;
+
+    for ii = 1:N_temp
+        str = sprintf('port_1_%dmm',ii);
         monitor(ii).name = str;
-        monitor(ii).coords = m_to_n(ii*0.96, M_y/2, 0.12:delta_z:0.72, delta,{0,0,0});
+        monitor(ii).coords = m_to_n(ii, 0, 0.3:delta_z:0.8, delta, origin);
+        monitor(ii).normal_direction = 1;
+    end
+
+    for ii = 1:N_temp
+        str = sprintf('port_2_%dmm',ii);
+        monitor(ii+N_temp).name = str;
+        monitor(ii+N_temp).coords = m_to_n(l_-w_/2, M_y/2-ii, 0.3:delta_z:0.8, delta, origin);
+        monitor(ii+N_temp).normal_direction = 2;
+    end
+
+    for ii = 1:6
+        str = sprintf('port_3_%dmm',ii);
+        monitor(ii+N_temp*2).name = str;
+        monitor(ii+N_temp*2).coords = m_to_n(l_-w_/2, -M_y/2+ii, 0.3:delta_z:0.8, delta, origin);
+        monitor(ii+N_temp*2).normal_direction = 2;
     end
    
 %==================================================%
