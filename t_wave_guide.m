@@ -34,7 +34,7 @@ function [param, grid, source, monitor] = model_waveguide()
     %Grid size and variables
 
     w_ = 0.6;
-    l_ = 15.2;
+    l_ = 10.2;
 
     M_x = l_+l_/2;
     M_y = l_*2;
@@ -95,12 +95,12 @@ function [param, grid, source, monitor] = model_waveguide()
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
    
-    source.coord = m_to_n(7, -0.3:delta_y:0.3, 0.3:delta_z:0.8, delta, origin);
+    source.coord = m_to_n(3, -0.3:delta_y:0.3, 0.3:delta_z:0.8, delta, origin);
 
 %     source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
-    N_temp = 14;
+    N_temp = 6;
 
     for ii = 1:N_temp
         str = sprintf('port_1_%dmm',ii);
