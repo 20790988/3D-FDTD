@@ -1,4 +1,4 @@
-function [param, grid, source, monitor] = model_waveguide()
+function [param, grid, source, monitor] = model_waveguide_dielectric()
     
     param = struct('material',0);
     source = struct('coord',0);
@@ -36,6 +36,8 @@ function [param, grid, source, monitor] = model_waveguide()
     M_x = 13.38;
     M_y = 14.4;
     M_z = 2.4;
+    l_ = 9.18;
+    w_ = 0.6;
 
     % Grid alignment behaviour
     grid_pause_on_unaligned = true;
@@ -58,10 +60,10 @@ function [param, grid, source, monitor] = model_waveguide()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {1.98,M_y/2,0.12};
+    origin = {0,M_y/2,0.12};
 
     %conductor
-     grid = add_cuboid(grid,delta,-1.98,7.2, ...
+     grid = add_cuboid(grid,delta,0,l_, ...
         -0.3,0.3, ...
         0.6,0.72, ...
         PEC, ...
@@ -69,12 +71,12 @@ function [param, grid, source, monitor] = model_waveguide()
 
     %ground plane
     grid = add_cuboid(grid,delta,0,M_x, ...
-        0,M_y, ...
+        -M_y/2,M_y/2, ...
         0,0.12, ...
         PEC, ...
-        {0,0,0});
+        origin);
 
-grid = add_cuboid(grid,delta,-1.98,M_x-1.98, ...
+grid = add_cuboid(grid,delta,0,M_x, ...
         -M_y/2,M_y/2, ...
         0.06,0.54, ...
         DIELECTRIC, ...
@@ -83,15 +85,16 @@ grid = add_cuboid(grid,delta,-1.98,M_x-1.98, ...
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
    
-    source.coord = m_to_n(0, -0.3:delta_y:0.3, 0.06:delta_z:0.54, delta, origin);
+    source.coord = m_to_n(3, -0.3:delta_y:0.3, 0.06:delta_z:0.54, delta, origin);
 
 %     source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
-    for ii = 1:7
+    for ii = 1:9
         str = sprintf('port_%d',ii);
         monitor(ii).name = str;
         monitor(ii).coords = m_to_n(ii*0.96, M_y/2, 0.12:delta_z:0.72, delta,{0,0,0});
+        monitor(ii).normal_direction = 1;
     end
    
 %==================================================%

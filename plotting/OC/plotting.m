@@ -3,180 +3,136 @@ close all
 
 epsilon_0 = 8.8542e-12;
 mu_0 = 1.2566e-6;
-e_eff = 9.6;
+e_eff = 6.5;
 %  e_eff = 7;
 
-monitor = load("monitor_bwl.mat");
-monitor = monitor.monitor_values;
+monitor = load("monitor.mat");
+monitor_values = monitor.monitor_values;
 
-delta_t = 115.55e-15;
-delta_x = 60e-6;
+delta_t = monitor.delta_t;
+delta_x = monitor.delta_z;
 
-Ez = monitor{1};
-N = 2700;
+Ez = monitor_values{1};
+N = 2200;
 
-num_monitors = length(monitor);
+num_monitors = length(monitor_values);
 
 for i = 1:1:num_monitors
-    Ez = monitor{i};
+    Ez = monitor_values{i};
     voltage_temp = sum(Ez,2);
     voltage_temp = squeeze(voltage_temp)*6*delta_x;
-    voltage(i,:) = voltage_temp(1:N);
+    voltage(i,:) = -voltage_temp(1:N);
 end
 
 t = (0:N-1)*delta_t;
 % plot(t,voltage);
 
-voltage(3,840:end) = 0;
+reference = gauspuls(t-35e-12,40e9,1).*2.75;
 
-reference = gauspuls(t-35e-12,40e9,1).*2.7;
-
-figure(1);
-hold on
-temp_t = t/1e-9;
-plot(temp_t,-voltage(1,:),'b');
-plot(temp_t,-voltage(3,:),'r--');
-plot(temp_t,reference,'k-.');
-
-hold off
-xlabel('Time (ns)')
-ylabel('Voltage (V)')
-legend('x = -1.02 mm','x = 0.9 mm','x = 0 mm (reference)')
-grid on
 
 N_fft = N*8;
-F_k = fft(-voltage,N_fft,2);
+voltage(1,1:945) = 0;
+F_k = fft(voltage,N_fft,2)/N_fft;
+F_ref = fft(reference,N_fft)/N_fft;
 
 % mag_phase_plot((0:N_fft-1)/N_fft/delta_t/1e9,F_k(index(1),:),'f (GHz)',2,'b');
-
 
 x = (0:N_fft-1)/N_fft/delta_t/1e9;
 f = (0:N_fft-1)/N_fft/delta_t;
 
-    f_x_1 = F_k(1,:)/N_fft;
-    f_x_4 = F_k(3,:)/N_fft;
+f_x_ref = F_ref;
+f_x_1 = F_k(1,:);
+f_x_4 = F_k(4,:);
 
-    %phase correction
-    f_x_4 = f_x_4.*exp(j*2*pi*f*sqrt(mu_0*epsilon_0*e_eff)*(-3.36e-3));
-%     f_x_4(3,840:end) = 0;
-    f_x_1 = f_x_1.*exp(-j*2*pi*f*sqrt(mu_0*epsilon_0*e_eff)*(-6.3e-3));
+% time_plot(t/1e-9,[voltage(4,:)],1,{'r','g','b','k'})
 
-    f_x_ref = fft(reference,N_fft)/N_fft;
-    f_x_ref = f_x_ref.*exp(j*2*pi*f*sqrt(mu_0*epsilon_0*e_eff)*(-7.2e-3));
+time_plot(t/1e-12,[reference; voltage(1,:); voltage(4,:)],2,{'k','r','b--'})
+legend('x=3.00 mm (Ref)','x=0.96 mm (Port 1)','x=3.84 mm');
+
+xlabel('time (ps)')
+ylabel('voltage (V)')
+
+%phase correction
+f_x_ref = f_x_ref.*exp(j*2*pi*f*sqrt(mu_0*epsilon_0*e_eff)*(-6.18e-3));
+f_x_1 = f_x_1.*exp(-j*2*pi*f*sqrt(mu_0*epsilon_0*e_eff)*(-8.22e-3));
+
+% mag_phase_plot(x,[f_x_ref;f_x_1;f_x_2;f_x_3],3,{'k','r','b--','m-.'})
+% xlim([0 60])
+% xlabel('freq (GHz)')
+
+s11 = f_x_1./f_x_ref;
+
+mag_phase_plot(x,[s11],4,{'r','b--','m-.'})
+xlim([0 60])
+xlabel('freq (GHz)')
+subplot(2,1,1)
+legend('S11')
+yticks([0:0.25:1.25])
+
+  
 
 
-    figure(2);
-    pl1 = subplot(2,1,1);
-    hold on
-    mag = abs(f_x_1);
-    plot(x,mag','b');
 
-    mag = abs(f_x_4);
-    plot(x,mag','r--');
-
-    mag = abs(f_x_ref);
-    plot(x,mag','k-.');
-   
-    hold off
-    ylabel('Magnitude')
-    grid on
-
-%     yticks(0:0.2:1.2);
-
-    pl2 = subplot(2,1,2);
-    hold on
-    pha = angle(f_x_1)*180/pi;
-    plot(x,pha','b');
-    pha = angle(f_x_4)*180/pi;
-    plot(x,pha','r--');
-    pha = angle(f_x_ref)*180/pi;
-    plot(x,pha','k-.');
-
-    ylabel('Phase (deg)')
-    hold off
-%     yticks([-pi -pi/2 0 pi/2 pi])
-%     yticklabels({'\pi', '-\pi/2', '0', '\pi/2', '\pi'})
-
-    yticks([-180 -90 0 90 180])
-%     yticklabels({'\pi', '-\pi/2', '0', '\pi/2', '\pi'})
-    xlabel('Frequency (GHz)');
-
-    grid on
+function mag_phase_plot(x,f_x,fig_no,linestyles)
     
-    linkaxes([pl1, pl2],'x');
-
-    xlim([0,60]);
-
-    s11 = f_x_1./f_x_ref;
-%     s11 = s11.*exp(-2*j*2*pi*f*sqrt(mu_0*epsilon_0*e_eff)*(-5.22e-3));
-
-    figure(3);
-    pl1 = subplot(2,1,1);
-    hold on
-    mag = real(s11);
-    plot(x,mag','b');
-    mag = imag(s11);
-    plot(x,mag','r');
-
-    hold off
-    ylabel('Magnitude')
-    grid on
-
-%     ylim([0, 1.2])
-    legend('S_{11}');
-    yticks(0:0.2:1.2)
-
-    pl2 = subplot(2,1,2);
-    hold on
-%     pha = angle(s11)*180/pi;
-    plot(x,pha','b');
-    
-    ylabel('Phase (deg)')
-    hold off
-    
-%     yticklabels({'\pi', '-\pi/2', '0', '\pi/2', '\pi'})
-    yticks([-180 -90 0 90 180])
-    xlabel('Frequency (GHz)');
-
-    grid on
-    
-    linkaxes([pl1, pl2],'x');
-   
-
-xlim([0,60]);
-% subplot(2,1,1);
-% ylim([0 0.1])
-hold off
-
-
-
-
-function mag_phase_plot(x,f_x,x_text,fig_no)
     figure(fig_no);
-    pl1 = subplot(2,1,1);
+
+    s = size(f_x);
+    s = s(1);
+    linestyles{s+1} = 0;
+
     mag = abs(f_x);
-    plot(x,mag');
+    pl1 = subplot(2,1,1);
+
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,mag(i,:),linestyles{i});
+        else
+            plot(x,mag(i,:));
+        end
+    end
+    hold off
+    
     ylabel('Magnitude')
     grid on
 
     pl2 = subplot(2,1,2);
-    pha = angle(f_x);
+    pha = angle(f_x)*180/pi;
     
-    mag_min = 0.001*max(mag,[],"all");
-
-%     pha(:) = 0;
-    plot(x,pha');
-    ylabel('Phase (rad)')
-    
-    temp_lim = ylim;
-    if(max(abs(temp_lim))<pi)
-        ylim([-pi pi])
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,pha(i,:),linestyles{i});
+        else
+            plot(x,pha(i,:));
+        end
     end
-    yticks([-pi -pi/2 0 pi/2 pi])
-    yticklabels({'\pi', '-\pi/2', '0', '\pi/2', '\pi'})
-    xlabel(x_text);
+    hold off
+    ylabel('Phase (deg)')
+    
+    yticks([-180 -90 0 90 180])
 
     grid on
     
     linkaxes([pl1, pl2],'x');
+end
+
+function time_plot(x,f_x,fig_no,linestyles)
+    
+    figure(fig_no);
+    
+    s = size(f_x);
+    s = s(1);
+    linestyles{s+1} = 0;
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,f_x(i,:),linestyles{i});
+        else
+            plot(x,f_x(i,:));
+        end
+    end
+    hold off
+    grid on
 end
