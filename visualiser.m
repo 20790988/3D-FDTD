@@ -8,6 +8,7 @@ clf
 PEC = 100;
 AIR = 0;
 DIELECTRIC = 50;
+SUPERCONDUCTOR = 200;
 
 newgrid = grid;
 s = size(newgrid);
@@ -17,16 +18,17 @@ color = ones(s);
 newgrid(newgrid==0) = PEC;
 newgrid(newgrid==1) = AIR;
 newgrid(newgrid==2) = DIELECTRIC;
+newgrid(newgrid==3) = SUPERCONDUCTOR;
 
 temp = zeros([s(1)+2,s(2)+2, s(3)+2]);
 temp(2:(s(1)+1),2:(s(2)+1),2:(s(3)+1)) = newgrid;
 newgrid = temp;
 
-material = [PEC,DIELECTRIC];
+material = [SUPERCONDUCTOR,DIELECTRIC];
 color = {[0.1 0.1 1],[0.1 1 0.1]};
 figure(1);
 
-for i=1:2
+for i=[1,2]
     
     s = size(newgrid);
     plot_grid = zeros(s);
@@ -44,9 +46,9 @@ for i=1:2
 %     set(p2,'EdgeColor','none');  
     
 end
-zlim([0 s(3)])
+zlim([0 s(3)]);
 xlim([0 s(1)+2]);
-ylim([0 s(2)+2])
+ylim([0 s(2)+2]);
 camlight('right');
 lighting flat;
 axis equal
@@ -57,3 +59,6 @@ set(p1,'FaceColor',color{1});
 set(p2,'FaceColor',color{2});  
 
 legend([p1 p2],{'PEC','Dielectric'})
+zlim([0 s(3)]);
+xlim([0 s(1)+2]);
+ylim([0 s(2)+2]);
