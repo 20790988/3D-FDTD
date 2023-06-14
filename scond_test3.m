@@ -44,25 +44,25 @@ function [param, grid, source, monitor] = model_waveguide()
     % Cell size in units 
     unit = 1e-3;
     
-    delta_x = 0.05;
+    delta_x = 0.1;
     delta_y = delta_x;
     delta_z = delta_x;
     
     %Grid size and variables
 
     w_ = 0.6;
-    l_ = 10;
+    l_ = 5;
 
     M_x = l_;
-    M_y = l_/2;
-    M_z = 2.3;
+    M_y = l_;
+    M_z = 2;
     
     % Grid alignment behaviour
     grid_pause_on_unaligned = true;
     grid_error_tolerance = 0.5;
 
     % Simulation length in seconds
-    param.M_t_max = 0.2e-9;
+    param.M_t_max = 1e-9;
     
 %============================================================%
 
@@ -78,45 +78,29 @@ function [param, grid, source, monitor] = model_waveguide()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {0,M_y/2,0};
+    origin = {0,M_y/2,M_z/2};
 
     %conductor1
-     grid = add_cuboid(grid,delta,0,l_, ...
-        -w_/2,w_/2, ...
-        0.9,1.1, ...
+     grid = add_cuboid(grid,delta,M_x/2,M_x, ...
+        -M_y/2,M_y/2, ...
+        -M_z/2,M_z/2, ...
         SUPERCONDUCTOR, ...
         origin);
 
-    %ground plane
-    grid = add_cuboid(grid,delta,0,l_, ...
-        -w_/2,w_/2, ...
-        0,0.2, ...
-        SUPERCONDUCTOR, ...
-        origin);
-
-    %dielectric
-%     grid = add_cuboid(grid,delta,0,M_x, ...
-%         -M_y/2,M_y/2, ...
-%         0.2+delta_x,0.9-delta_x, ...
-%         DIELECTRIC, ...
-%         origin);
-  
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
    
-    a = 0.2+delta_x;
-    b = 0.9-delta_x;
-    source.coord = m_to_n(3, -0.3:delta_y:0.3, a:delta_z:b, delta, origin);
+    source.coord = m_to_n(1, -0.3:delta_y:0.3, -0.3:delta_z:0.3, delta, origin);
 
 %     source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
-    N_temp = 9;
+    N_temp = 2;
 
     for ii = 1:N_temp
         str = sprintf('port_1_%dmm',ii);
         monitor(ii).name = str;
-        monitor(ii).coords = m_to_n(ii, 0, a:delta_z:b, delta, origin);
+        monitor(ii).coords = m_to_n(ii-0.5, 0, 0, delta, origin);
         monitor(ii).normal_direction = 1;
     end
    
