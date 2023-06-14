@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = scond_test;
+    [param, material, source, monitor] = scond_test3;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -47,7 +47,7 @@ fprintf('Start\n')
     delta_z = delta{3};
     
     c = 1./sqrt(epsilon.*mu);
-    delta_t = delta_x/(max(c)*sqrt(3));
+    delta_t = delta_x/(2*max(c)*sqrt(3));
     
 % Simulation length
     N_t_max = floor(param.M_t_max/delta_t);
@@ -76,7 +76,7 @@ fprintf('Start\n')
 %     source_val_y = source.value{2}((0:N_t_max)*delta_t);
 
     t = (0:N_t_max)*delta_t;
-    [source_val_E,source_val_H] = source.value{3}(t,delta_t);
+    [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x);
 
     figure(1);
     plot(t,source_val_E),
@@ -99,13 +99,18 @@ lambda_L = lambda_L/(sqrt(1-(T_op/T_c)^4));
 w_n2 = ((T_op/T_c)^4)/(lambda_L^2*mu_0*epsilon_0);
 w_s2 = (1-(T_op/T_c)^4)/(lambda_L^2*mu_0*epsilon_0);
 
+
 tau_n = sigma_n*lambda_L^2*mu_0;
 gamma_n = 1/tau_n;
 
-chi_n_0 = epsilon_0*w_s2*delta_t;
-chi_s_0 = (epsilon_0*w_n2/gamma_n)*(1-exp(-gamma_n*delta_t));
+alp_s = 2;
+xii_s = -1;
+gam_s = (delta_t)^2*epsilon_0*w_s2;
 
-C_acc = exp(-gamma_n*delta_t);
+alp_n = 4/(delta_t/tau_n+2);
+xii_n = (delta_t/tau_n-2)/(delta_t/tau_n+2);
+gam_n = (epsilon_0*w_n2*2*(delta_t^2))/(delta_t/tau_n+2);
+
 
 %FDTD parameters
 if superconducting_model == NONE
@@ -114,18 +119,19 @@ if superconducting_model == NONE
         ./(1+(sigma.*delta_t)./(2.*epsilon));
     C_b_single = (delta_t./(epsilon.*delta_x)) ...
         ./(1+(sigma.*delta_t)./(2.*epsilon));
+    C_c_single = 0;
 
 elseif superconducting_model == TWOFLUID
-    
-    chi_s_0_t = [0 0 chi_s_0];
-    chi_n_0_t = [0 0 chi_n_0];
+    gam_s_ = [0 0 gam_s];
+    gam_n_ = [0 0 gam_n];
 
-    a_temp = (0.5*delta_t./epsilon).*(sigma+chi_s_0_t+chi_n_0_t);
+    half_sum_gam = 0.5*(gam_s_+gam_n_);
+
+    C_a_single = half_sum_gam./(2*epsilon+half_sum_gam+sigma*delta_t);
+    C_b_single = (2*epsilon-sigma*delta_t) ...
+        ./(2*epsilon+half_sum_gam+sigma*delta_t);
+    C_c_single = (2*delta_t)./(2*epsilon+half_sum_gam+sigma*delta_t);
    
-    C_a_single = (1-a_temp)./(1+a_temp);
-    C_b_single = (delta_t./(epsilon.*delta_x))./(1+a_temp);
-    C_c_single = -(delta_t./(epsilon))./(1+a_temp);
-    C_c_single(1:2) = 0;
 end
 
 D_a_single = (1-(sigma_m.*delta_t)./(2.*mu))./(1+(sigma_m.*delta_t)./(2.*mu));
@@ -133,6 +139,8 @@ D_b_single = (delta_t./(mu.*delta_x))./(1+(sigma_m.*delta_t)./(2.*mu));
 
 pec_mask = (material ~= 0);
 material(material==0) = 1;
+
+sc_mask = (material == 3);
 
 C_a = C_a_single(material);
 C_b = C_b_single(material);
@@ -169,22 +177,29 @@ Ey_inc = zeros(1,N_y,N_z);
 Ez_inc = zeros(1,N_y,N_z);
   
 %superconducting
+J_sx_new = zeros(N_x,N_y,N_z);
+J_sy_new = zeros(N_x,N_y,N_z);
+J_sz_new = zeros(N_x,N_y,N_z);
 
-psi_sx_new = zeros(N_x,N_y,N_z);
-psi_sy_new = zeros(N_x,N_y,N_z);
-psi_sz_new = zeros(N_x,N_y,N_z);
+J_nx_new = zeros(N_x,N_y,N_z);
+J_ny_new = zeros(N_x,N_y,N_z);
+J_nz_new = zeros(N_x,N_y,N_z);
 
-psi_nx_new = zeros(N_x,N_y,N_z);
-psi_ny_new = zeros(N_x,N_y,N_z);
-psi_nz_new = zeros(N_x,N_y,N_z);
+J_sx_old = zeros(N_x,N_y,N_z);
+J_sy_old = zeros(N_x,N_y,N_z);
+J_sz_old = zeros(N_x,N_y,N_z);
 
-psi_sx_old = zeros(N_x,N_y,N_z);
-psi_sy_old = zeros(N_x,N_y,N_z);
-psi_sz_old = zeros(N_x,N_y,N_z);
+J_nx_old = zeros(N_x,N_y,N_z);
+J_ny_old = zeros(N_x,N_y,N_z);
+J_nz_old = zeros(N_x,N_y,N_z);
 
-psi_nx_old = zeros(N_x,N_y,N_z);
-psi_ny_old = zeros(N_x,N_y,N_z);
-psi_nz_old = zeros(N_x,N_y,N_z);
+J_sx_old_old = zeros(N_x,N_y,N_z);
+J_sy_old_old = zeros(N_x,N_y,N_z);
+J_sz_old_old = zeros(N_x,N_y,N_z);
+
+J_nx_old_old = zeros(N_x,N_y,N_z);
+J_ny_old_old = zeros(N_x,N_y,N_z);
+J_nz_old_old = zeros(N_x,N_y,N_z);
 
 %monitors
 num_monitors = length(monitor);
@@ -224,7 +239,7 @@ while stop_cond == false
 
   
     %====================PLOTTING START=====================%
-    if  step<0
+    if  step>0
         
         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %          plot_field(H_tot,N_x/2,N_y/2,14,step,delta,delta_t);
@@ -235,10 +250,10 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,14,step,delta,delta_t,500);
+        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t,1);
 %         view([0 0 1])
 
-        tempz = floor(14);
+        tempz = floor(N_z/2);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
@@ -296,45 +311,61 @@ while stop_cond == false
             + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
             + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk));
 
-    elseif superconducting_model == TWOFLUID
-        
-        %update psi matrices
-        
-        psi_nx_new = Ex_old*chi_n_0+C_acc*psi_nx_old;
-        psi_ny_new = Ey_old*chi_n_0+C_acc*psi_ny_old;
-        psi_nz_new = Ez_old*chi_n_0+C_acc*psi_nz_old;
-        
-        temp = 1-1e-6;
-        psi_sx_new = Ex_old*chi_s_0+temp*psi_sx_old;
-        psi_sy_new = Ey_old*chi_s_0+temp*psi_sy_old;
-        psi_sz_new = Ez_old*chi_s_0+temp*psi_sz_old;
+    elseif superconducting_model == TWOFLUID      
+        %update E n+1
 
-        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
+        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*Ex_old(ii,jj,kk) ...
+            + C_c(ii,jj,kk).*((1/delta_x).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
             + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk)) ...
-            - C_c(ii,jj,kk).*(0.5*(psi_sx_new(ii,jj,kk)+psi_sx_old(ii,jj,kk)) ...
-            + C_acc*0.5*(psi_nx_new(ii,jj,kk)+psi_nx_old(ii,jj,kk)));
-    
-        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
+            + 0.5*((1+alp_s).*J_sx_old(ii,jj,kk)+xii_s.*J_sx_old_old(ii,jj,kk) ...
+            + (1+alp_n).*J_nx_old(ii,jj,kk)+xii_n.*J_nx_old_old(ii,jj,kk)));
+                
+        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*Ey_old(ii,jj,kk) ...
+            + C_c(ii,jj,kk).*((1/delta_x).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
             + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk)) ...
-            - C_c(ii,jj,kk).*(0.5*(psi_sy_new(ii,jj,kk)+psi_sy_old(ii,jj,kk)) ...
-            + C_acc*0.5*(psi_ny_new(ii,jj,kk)+psi_ny_old(ii,jj,kk)));
+            + 0.5*((1+alp_s).*J_sy_old(ii,jj,kk)+xii_s.*J_sy_old_old(ii,jj,kk) ...
+            + (1+alp_n).*J_ny_old(ii,jj,kk)+xii_n.*J_ny_old_old(ii,jj,kk)));
     
-        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
+        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*Ez_old(ii,jj,kk) ...
+            + C_c(ii,jj,kk).*((1/delta_x).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
             + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk)) ...
-            - C_c(ii,jj,kk).*(0.5*(psi_sz_new(ii,jj,kk)+psi_sz_old(ii,jj,kk)) ...
-            + C_acc*0.5*(psi_nz_new(ii,jj,kk)+psi_nz_old(ii,jj,kk)));
+            + 0.5*((1+alp_s).*J_sz_old(ii,jj,kk)+xii_s.*J_sz_old_old(ii,jj,kk) ...
+            + (1+alp_n).*J_nz_old(ii,jj,kk)+xii_n.*J_nz_old_old(ii,jj,kk)));
     
+        %update J
+        
+        J_sx_new = update_J(J_sx_old,J_sx_old_old,Ex_new,Ex_old_old, ...
+            alp_s,xii_s,gam_s,delta_t);
+        J_sy_new = update_J(J_sy_old,J_sy_old_old,Ey_new,Ey_old_old, ...
+            alp_s,xii_s,gam_s,delta_t);
+        J_sz_new = update_J(J_sz_old,J_sz_old_old,Ez_new,Ez_old_old, ...
+            alp_s,xii_s,gam_s,delta_t);
+        
+        J_nx_new = update_J(J_nx_old,J_nx_old_old,Ex_new,Ex_old_old, ...
+            alp_n,xii_n,gam_n,delta_t);
+        J_ny_new = update_J(J_ny_old,J_ny_old_old,Ey_new,Ey_old_old, ...
+            alp_n,xii_n,gam_n,delta_t);
+        J_nz_new = update_J(J_nz_old,J_nz_old_old,Ez_new,Ez_old_old, ...
+            alp_n,xii_n,gam_n,delta_t);
 
-        psi_nx_old = psi_nx_new;
-        psi_ny_old = psi_ny_new;
-        psi_nz_old = psi_nz_new;
+        J_sx_old_old = J_sx_old;
+        J_sy_old_old = J_sy_old;
+        J_sz_old_old = J_sz_old;
+        
+        J_nx_old_old = J_nx_old;
+        J_ny_old_old = J_ny_old;
+        J_nz_old_old = J_nz_old;
 
-        psi_sx_old = psi_sx_new;
-        psi_sy_old = psi_sy_new;
-        psi_sz_old = psi_sz_new;
+        J_sx_old = J_sx_new.*sc_mask;
+        J_sy_old = J_sy_new.*sc_mask;
+        J_sz_old = J_sz_new.*sc_mask;
+        
+        J_nx_old = J_nx_new.*sc_mask;
+        J_ny_old = J_ny_new.*sc_mask;
+        J_nz_old = J_nz_new.*sc_mask;
     end
 
     %SFTF source insert
@@ -585,6 +616,9 @@ end
 
 end
 
+function J_new = update_J(J_old,J_old_old,E_new,E_old_old,alp,xii,gam,delta_t)
+    J_new =alp*J_old+xii*J_old_old+(0.5*gam/delta_t)*(E_new-E_old_old);
+end
 
 function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t,c_max)
 
