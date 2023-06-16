@@ -24,7 +24,7 @@ temp = zeros([s(1)+2,s(2)+2, s(3)+2]);
 temp(2:(s(1)+1),2:(s(2)+1),2:(s(3)+1)) = newgrid;
 newgrid = temp;
 
-material = [SUPERCONDUCTOR,DIELECTRIC];
+material = [PEC,SUPERCONDUCTOR];
 color = {[0.1 0.1 1],[0.1 1 0.1]};
 figure(1);
 
@@ -46,9 +46,6 @@ for i=[1,2]
 %     set(p2,'EdgeColor','none');  
     
 end
-zlim([0 s(3)]);
-xlim([0 s(1)+2]);
-ylim([0 s(2)+2]);
 camlight('right');
 lighting flat;
 axis equal
@@ -59,6 +56,7 @@ set(p1,'FaceColor',color{1});
 set(p2,'FaceColor',color{2});  
 
 legend([p1 p2],{'PEC','Dielectric'})
+xlim([0 s(2)+2]);
+ylim([0 s(1)+2]);
 zlim([0 s(3)]);
-xlim([0 s(1)+2]);
-ylim([0 s(2)+2]);
+
