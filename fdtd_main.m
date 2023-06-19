@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = scond_test;
+    [param, material, source, monitor] = SFQLine;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -96,7 +96,7 @@ end
 %superconducting constants
 lambda_L = lambda_L/(sqrt(1-(T_op/T_c)^4));
 
-alp_s = 2;
+alp_s = 1;
 gam_s = delta_t/(2*mu_0*lambda_L^2);
 
 sigma(3) = sigma_n*(T_op/T_c)^4;
@@ -222,7 +222,7 @@ while stop_cond == false
 
   
     %====================PLOTTING START=====================%
-    if  step<0
+    if  step>0
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %          plot_field(H_tot,N_x/2,N_y/2,14,step,delta,delta_t);
@@ -233,10 +233,10 @@ while stop_cond == false
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
+        plot_field(E_tot,N_x/2,N_y/2,16,step,delta,delta_t);
 %         view([0 0 1])
 
-        tempz = floor(N_z/2);
+        tempz = floor(16);
         tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);

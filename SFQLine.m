@@ -29,7 +29,7 @@ function [param, grid, source, monitor] = model_waveguide()
     % Superconductivity
         %0 = no superconductivity
         %1 = two-fluid only
-        param.sc_model_level = 0;
+        param.sc_model_level = 1;
 
         %lambda in m
         param.lambda_L = 90e-9;
@@ -44,13 +44,13 @@ function [param, grid, source, monitor] = model_waveguide()
     % Cell size in units 
     unit = 1e-6;
     
-    delta_x = 0.1;
+    delta_x = 0.05;
     delta_y = delta_x;
     delta_z = delta_x;
     
     %Grid size and variables
 
-    l_ = 20;
+    l_ = 10;
 
     M_x = l_;
     M_y = 12;
@@ -61,7 +61,7 @@ function [param, grid, source, monitor] = model_waveguide()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 10e-12;
+    param.M_t_max = 80e-15;
     
 %============================================================%
 
@@ -83,35 +83,36 @@ function [param, grid, source, monitor] = model_waveguide()
      grid = add_cuboid(grid,delta,0,l_, ...
         0,10, ...
         0,0.2, ...
-        PEC, ...
+        SUPERCONDUCTOR, ...
         origin);
 
      %M3
      grid = add_cuboid(grid,delta,0,l_, ...
         2.75,7.25, ...
         0.4,0.6, ...
-        PEC, ...
+        SUPERCONDUCTOR, ...
         origin);
 
      %M4
      grid = add_cuboid(grid,delta,0,l_, ...
         0,10, ...
         0.8,1.0, ...
-        PEC, ...
+        SUPERCONDUCTOR, ...
         origin);
 
-     grid = routeblock(grid,delta,PEC,origin,{0,0,0});
-     grid = routeblock(grid,delta,PEC,origin,{10,0,0});
+     grid = routeblock(grid,delta,SUPERCONDUCTOR,origin,{0,0,0});
+%      grid = routeblock(grid,delta,SUPERCONDUCTOR,origin,{10,0,0});
 
 %====================SOURCE PROPERTIES====================%
     %if t_max = 0 (default), source will continue as long as simulation
-   
-    source.coord = m_to_n(2.5, 2.75:delta_y:7.25, 0.2:delta_z:0.4, delta, origin);
+    a = 0.2+delta_z;
+    b = 0.4-delta_z;
+    source.coord = m_to_n(2.5, 2.75:delta_y:7.25, a:delta_z:b, delta, origin);
 
 %     source.t_max = 0.6e-9;
 
 %====================MONITOR SETUP====================%
-    N_temp = 19;
+    N_temp = 9;
 
     for ii = 1:N_temp
         str = sprintf('port_1_%dmm',ii);
@@ -157,7 +158,7 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x)
     mu_0 = 1.2566e-6;
     e_eff = 4.6;
     eta = sqrt(mu_0./(epsilon_0*e_eff));
-    a = 2e-3/(13*delta_x);
+    a = 2e-3;
 
 %     t0 = 36e-12;
 %     T = 4.115e-12;
@@ -165,9 +166,9 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x)
 %     source_signal_H = exp(-(t-t0).^2./(T^2))*a/eta;
     
    
-    source_signal_E = -gaus_derv(t,1.5e-12,0.2e-12)*a;
+    source_signal_E = -gaus_derv(t,20e-15,5e-15)*a;
     
-    source_signal_H = gaus_derv(t,1.5e-12-0.366*delta_t,0.2e-12)*a/eta;
+    source_signal_H = gaus_derv(t,20e-15-0.366*delta_t,5e-15)*a/eta;
 
 
 %     t = t-35e-12;
