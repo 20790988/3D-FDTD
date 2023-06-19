@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = scond_test3;
+    [param, material, source, monitor] = scond_test;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -22,7 +22,7 @@ fprintf('Start\n')
     mu_r = param.material(4,:);
     mu = mu_0*mu_r;
     
-    superconducting_model = 1;
+    superconducting_model = param.sc_model_level;
     NONE = 0;
     TWOFLUID = 1;
 
@@ -47,7 +47,7 @@ fprintf('Start\n')
     delta_z = delta{3};
     
     c = 1./sqrt(epsilon.*mu);
-    delta_t = delta_x/(2*max(c)*sqrt(3));
+    delta_t = delta_x/(max(c)*sqrt(3));
     
 % Simulation length
     N_t_max = floor(param.M_t_max/delta_t);
@@ -80,7 +80,7 @@ fprintf('Start\n')
 
     figure(1);
     plot(t,source_val_E),
-    clf;
+   
 
     source_N_t_max = floor(source.t_max/delta_t);
 
@@ -96,21 +96,10 @@ end
 %superconducting constants
 lambda_L = lambda_L/(sqrt(1-(T_op/T_c)^4));
 
-w_n2 = ((T_op/T_c)^4)/(lambda_L^2*mu_0*epsilon_0);
-w_s2 = (1-(T_op/T_c)^4)/(lambda_L^2*mu_0*epsilon_0);
-
-
-tau_n = sigma_n*lambda_L^2*mu_0;
-gamma_n = 1/tau_n;
-
 alp_s = 2;
-xii_s = -1;
-gam_s = (delta_t)^2*epsilon_0*w_s2;
+gam_s = delta_t/(2*mu_0*lambda_L^2);
 
-alp_n = 4/(delta_t/tau_n+2);
-xii_n = (delta_t/tau_n-2)/(delta_t/tau_n+2);
-gam_n = (epsilon_0*w_n2*2*(delta_t^2))/(delta_t/tau_n+2);
-
+sigma(3) = sigma_n*(T_op/T_c)^4;
 
 %FDTD parameters
 if superconducting_model == NONE
@@ -119,18 +108,20 @@ if superconducting_model == NONE
         ./(1+(sigma.*delta_t)./(2.*epsilon));
     C_b_single = (delta_t./(epsilon.*delta_x)) ...
         ./(1+(sigma.*delta_t)./(2.*epsilon));
-    C_c_single = 0;
 
 elseif superconducting_model == TWOFLUID
-    gam_s_ = [0 0 gam_s];
-    gam_n_ = [0 0 gam_n];
+    
+    half_sum_gam = 0.5*[0 0 gam_s];
+    
+    C_a_single = (epsilon/delta_t - half_sum_gam- sigma/2) ...
+        ./(epsilon/delta_t + half_sum_gam + sigma/2);
 
-    half_sum_gam = 0.5*(gam_s_+gam_n_);
+    C_b_single = (1/delta_x)./(epsilon/delta_t + half_sum_gam + sigma/2);
+    C_c_single = -1./(epsilon/delta_t + half_sum_gam + sigma/2);
 
-    C_a_single = half_sum_gam./(2*epsilon+half_sum_gam+sigma*delta_t);
-    C_b_single = (2*epsilon-sigma*delta_t) ...
-        ./(2*epsilon+half_sum_gam+sigma*delta_t);
-    C_c_single = (2*delta_t)./(2*epsilon+half_sum_gam+sigma*delta_t);
+    C_c_single(1:2) = 0;
+    C_c = C_c_single(material);
+    
    
 end
 
@@ -144,7 +135,7 @@ sc_mask = (material == 3);
 
 C_a = C_a_single(material);
 C_b = C_b_single(material);
-C_c = C_c_single(material);
+
 
 D_a = D_a_single(material);
 D_b = D_b_single(material);
@@ -181,25 +172,17 @@ J_sx_new = zeros(N_x,N_y,N_z);
 J_sy_new = zeros(N_x,N_y,N_z);
 J_sz_new = zeros(N_x,N_y,N_z);
 
-J_nx_new = zeros(N_x,N_y,N_z);
-J_ny_new = zeros(N_x,N_y,N_z);
-J_nz_new = zeros(N_x,N_y,N_z);
+% J_nx_new = zeros(N_x,N_y,N_z);
+% J_ny_new = zeros(N_x,N_y,N_z);
+% J_nz_new = zeros(N_x,N_y,N_z);
 
 J_sx_old = zeros(N_x,N_y,N_z);
 J_sy_old = zeros(N_x,N_y,N_z);
 J_sz_old = zeros(N_x,N_y,N_z);
 
-J_nx_old = zeros(N_x,N_y,N_z);
-J_ny_old = zeros(N_x,N_y,N_z);
-J_nz_old = zeros(N_x,N_y,N_z);
-
-J_sx_old_old = zeros(N_x,N_y,N_z);
-J_sy_old_old = zeros(N_x,N_y,N_z);
-J_sz_old_old = zeros(N_x,N_y,N_z);
-
-J_nx_old_old = zeros(N_x,N_y,N_z);
-J_ny_old_old = zeros(N_x,N_y,N_z);
-J_nz_old_old = zeros(N_x,N_y,N_z);
+% J_nx_old = zeros(N_x,N_y,N_z);
+% J_ny_old = zeros(N_x,N_y,N_z);
+% J_nz_old = zeros(N_x,N_y,N_z);
 
 %monitors
 num_monitors = length(monitor);
@@ -239,18 +222,18 @@ while stop_cond == false
 
   
     %====================PLOTTING START=====================%
-    if  step>0
+    if  step<0
         
-        H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
+%         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %          plot_field(H_tot,N_x/2,N_y/2,14,step,delta,delta_t);
 
-        tempz = floor(N_z/2);
-        tempy = floor(N_y/2);
-        H_tot_line = (H_tot(:,tempy,tempz));
+%         tempz = floor(N_z/2);
+%         tempy = floor(N_y/2);
+%         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t,1);
+        plot_field(E_tot,N_x/2,N_y/2,N_z/2,step,delta,delta_t);
 %         view([0 0 1])
 
         tempz = floor(N_z/2);
@@ -313,59 +296,34 @@ while stop_cond == false
 
     elseif superconducting_model == TWOFLUID      
         %update E n+1
-
-        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*Ex_old(ii,jj,kk) ...
-            + C_c(ii,jj,kk).*((1/delta_x).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
+        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
             + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk)) ...
-            + 0.5*((1+alp_s).*J_sx_old(ii,jj,kk)+xii_s.*J_sx_old_old(ii,jj,kk) ...
-            + (1+alp_n).*J_nx_old(ii,jj,kk)+xii_n.*J_nx_old_old(ii,jj,kk)));
-                
-        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*Ey_old(ii,jj,kk) ...
-            + C_c(ii,jj,kk).*((1/delta_x).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
+            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sx_old(ii,jj,kk);
+    
+        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
             + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk)) ...
-            + 0.5*((1+alp_s).*J_sy_old(ii,jj,kk)+xii_s.*J_sy_old_old(ii,jj,kk) ...
-            + (1+alp_n).*J_ny_old(ii,jj,kk)+xii_n.*J_ny_old_old(ii,jj,kk)));
+            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sy_old(ii,jj,kk);
     
-        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*Ez_old(ii,jj,kk) ...
-            + C_c(ii,jj,kk).*((1/delta_x).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
+        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
             + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk)) ...
-            + 0.5*((1+alp_s).*J_sz_old(ii,jj,kk)+xii_s.*J_sz_old_old(ii,jj,kk) ...
-            + (1+alp_n).*J_nz_old(ii,jj,kk)+xii_n.*J_nz_old_old(ii,jj,kk)));
-    
+            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sz_old(ii,jj,kk);
+           
         %update J
-        
-        J_sx_new = update_J(J_sx_old,J_sx_old_old,Ex_new,Ex_old_old, ...
-            alp_s,xii_s,gam_s,delta_t);
-        J_sy_new = update_J(J_sy_old,J_sy_old_old,Ey_new,Ey_old_old, ...
-            alp_s,xii_s,gam_s,delta_t);
-        J_sz_new = update_J(J_sz_old,J_sz_old_old,Ez_new,Ez_old_old, ...
-            alp_s,xii_s,gam_s,delta_t);
-        
-        J_nx_new = update_J(J_nx_old,J_nx_old_old,Ex_new,Ex_old_old, ...
-            alp_n,xii_n,gam_n,delta_t);
-        J_ny_new = update_J(J_ny_old,J_ny_old_old,Ey_new,Ey_old_old, ...
-            alp_n,xii_n,gam_n,delta_t);
-        J_nz_new = update_J(J_nz_old,J_nz_old_old,Ez_new,Ez_old_old, ...
-            alp_n,xii_n,gam_n,delta_t);
+       J_sx_new = alp_s*J_sx_old+gam_s*(Ex_new+Ex_old);
+       J_sy_new = alp_s*J_sy_old+gam_s*(Ey_new+Ey_old);
+       J_sz_new = alp_s*J_sz_old+gam_s*(Ez_new+Ez_old);
 
-        J_sx_old_old = J_sx_old;
-        J_sy_old_old = J_sy_old;
-        J_sz_old_old = J_sz_old;
-        
-        J_nx_old_old = J_nx_old;
-        J_ny_old_old = J_ny_old;
-        J_nz_old_old = J_nz_old;
 
         J_sx_old = J_sx_new.*sc_mask;
         J_sy_old = J_sy_new.*sc_mask;
         J_sz_old = J_sz_new.*sc_mask;
         
-        J_nx_old = J_nx_new.*sc_mask;
-        J_ny_old = J_ny_new.*sc_mask;
-        J_nz_old = J_nz_new.*sc_mask;
+%         J_nx_old = J_nx_new.*sc_mask;
+%         J_ny_old = J_ny_new.*sc_mask;
+%         J_nz_old = J_nz_new.*sc_mask;
     end
 
     %SFTF source insert
