@@ -24,8 +24,8 @@ temp = zeros([s(1)+2,s(2)+2, s(3)+2]);
 temp(2:(s(1)+1),2:(s(2)+1),2:(s(3)+1)) = newgrid;
 newgrid = temp;
 
-material = [PEC,SUPERCONDUCTOR];
-color = {[0.1 0.1 1],[0.1 1 0.1]};
+material = [SUPERCONDUCTOR,DIELECTRIC];
+color = {[0.2 1 1],[0.2 1 0.2]};
 figure(1);
 
 for i=[1,2]
@@ -47,16 +47,17 @@ for i=[1,2]
     
 end
 camlight('right');
-lighting flat;
+lighting gouraud;
 axis equal
+lightangle(0,45);
 
 p1 = patch(NaN,NaN,NaN,NaN);
 p2 = patch(NaN,NaN,NaN,NaN);
 set(p1,'FaceColor',color{1});  
 set(p2,'FaceColor',color{2});  
 
-legend([p1 p2],{'PEC','Dielectric'})
+legend([p1,p2],{'Superconductor','Dielectric'})
 xlim([0 s(2)+2]);
 ylim([0 s(1)+2]);
 zlim([0 s(3)]);
-
+xlabel('Cells \Delta x = 50 nm')
