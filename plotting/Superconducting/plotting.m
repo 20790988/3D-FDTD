@@ -1,18 +1,51 @@
 clear
 close all
 
-% load("colorblind_colormap.mat");
+%====================SETTINGS=====================%
+
+result_filename = "monitor_04_1.mat";
+
+%Line properties
+    %distance between plates and width of line in meters
+    d = 0.3e-6;
+    w = 4e-6;
+
+    epsilon_r = 9.6;
+
+    is_microstrip = true;
+
+%Sampling
+
+    % max number of samples used
+    N_max = Inf;
+
+    %upsampling factor for fft. N*k samples used
+    k_fft = 8;
+
+    %how many samples of port 1 voltage are set to zero
+    N_zero = 0;
+
+%Indices
+    port_1_index = 1;
+    port_2_index = 4;
+
+    reference_index = 2;
+        %for index 0 the source values are used
+
+    %phase correction distance measured away from scattering object
+    % in meters
+    phase_distance_ref = 0;
+    phase_distance_1 = 0;
+    phase_distance_2 = 0;
+
+%=========================================%
 
 epsilon_0 = 8.8542e-12;
 mu_0 = 1.2566e-6;
-epsilon_r = 9.6;
 
-d = 0.6e-3;
-w = 0.6e-3;
-
-e_eff_0 = (epsilon_r+1)/2+(epsilon_r-1)/(2*sqrt(1+12*d/w));
-
-Z_0 = 0;
+if is_microstrip
+    e_eff_0 = (epsilon_r+1)/2+(epsilon_r-1)/(2*sqrt(1+12*d/w));
+end
 
 if w/d <= 1
     Z_0 = (60/sqrt(e_eff_0))*log((8*d)/(w)+(w)/(4*d));
@@ -20,14 +53,19 @@ else
     Z_0 = (120*pi)/(sqrt(e_eff_0)*(w/d+1.393+0.667*log(w/d+1.444)));
 end
 
-monitor = load("monitor.mat");
+monitor = load(result_filename);
 monitor_values = monitor.monitor_values;
 
 delta_t = monitor.delta_t;
 delta_x = monitor.delta_z;
 
 Ez = monitor_values{1};
-N = 5000;
+
+N = length(Ez);
+
+if N_max < N
+    N = N_max;
+end
 
 num_monitors = length(monitor_values);
 
@@ -40,47 +78,54 @@ for i = 1:1:num_monitors
 end
 
 
-
 t = (0:N-1)*delta_t;
-plot(t,voltage);
+figure(1)
+plot(t./1e-12,voltage);
+grid on
+xlabel('Time (ps)')
+ylabel('Voltage')
 
-reference = gauspuls(t-35e-12,40e9,1).*2e-3;
 
-N_fft = N*8;
-% voltage(1,1:600) = 0;
+if reference_index == 0 
+    reference = monitor.source_val_E;
+else
+    reference = voltage(reference_index,:);
+end
+
+N_fft = N*k_fft;
+
+voltage(1,1:N_zero) = 0;
+
 F_k = fft(voltage,N_fft,2)/N_fft;
 F_ref = fft(reference,N_fft)/N_fft;
-
-% mag_phase_plot((0:N_fft-1)/N_fft/delta_t/1e9,F_k(index(1),:),'f (GHz)',2,'b');
 
 x = (0:N_fft-1)/N_fft/delta_t/1e9;
 f = (0:N_fft-1)/N_fft/delta_t;
 
-G_f = (0.6+0.009*Z_0).*(((f/1e9)./(Z_0/(8*pi*(d*100)))).^2);
-e_eff_f = epsilon_r-(epsilon_r-e_eff_0)./(1+G_f);
-
-e_eff_f = 1;
+if is_microstrip
+    G_f = (0.6+0.009*Z_0).*(((f/1e9)./(Z_0/(8*pi*(d*100)))).^2);
+    e_eff_f = epsilon_r-(epsilon_r-e_eff_0)./(1+G_f);
+else
+    e_eff_f = epsilon_r;
+end
 
 f_x_ref = F_ref;
-f_x_1 = F_k(1,:);
-f_x_2 = F_k(7,:);
+f_x_1 = F_k(port_1_index,:);
+f_x_2 = F_k(port_2_index,:);
 
-% time_plot(t/1e-9,[voltage(1:6,:)],1,{'r','g','b','k'})
+time_plot(t/1e-12,[reference; ...
+    voltage(port_1_index,:); ...
+    voltage(port_2_index,:)],2,{'k','r--','b-.'})
 
-time_plot(t/1e-12,[reference; voltage(1,:); voltage(7,:)],2,{'k','r--','b-.'})
 legend('Ref','Port 1','Port 2');
 
 xlabel('time (ps)')
 ylabel('voltage (V)')
 
 %phase correction
-% f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(-6.6e-3));
-f_x_1 = f_x_1.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(-2e-3));
-f_x_2 = f_x_2.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(-4e-3));
-
-% mag_phase_plot(x,[f_x_ref;f_x_1;f_x_2;f_x_3],3,{'k','r','b--','m-.'})
-% xlim([0 60])
-% xlabel('freq (GHz)')
+f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_ref));
+f_x_1 = f_x_1.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_1));
+f_x_2 = f_x_2.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_2));
 
 s11 = f_x_1./f_x_ref;
 s21 = f_x_2./f_x_ref;
@@ -166,4 +211,9 @@ function time_plot(x,f_x,fig_no,linestyles)
     end
     hold off
     grid on
+end
+
+function pulse = gaus_derv(t,mu,sigma)
+    pulse = (t-mu).*exp(-((t-mu).^2)/(2*sigma^2));
+    pulse =  pulse./max(pulse,[],'all');
 end

@@ -9,7 +9,7 @@ clear
 fprintf('Start\n')
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = SFQLine;
+    [param, material, source, monitor] = s04_Toepfer_Line;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -76,10 +76,11 @@ fprintf('Start\n')
 %     source_val_y = source.value{2}((0:N_t_max)*delta_t);
 
     t = (0:N_t_max)*delta_t;
-    [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x);
+    [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
 
     figure(1);
-    plot(t,source_val_E),
+%     plot(t,source_val_E),
+%     monitor.source_val_E = source_val_E;
    
 
     source_N_t_max = floor(source.t_max/delta_t);
@@ -139,6 +140,8 @@ C_b = C_b_single(material);
 
 D_a = D_a_single(material);
 D_b = D_b_single(material);
+
+c_ = c(material);
 
 % matrix declaration
 Ex_old_old = zeros(N_x,N_y,N_z);
@@ -222,7 +225,7 @@ while stop_cond == false
 
   
     %====================PLOTTING START=====================%
-    if  step>0
+    if  step<0
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %          plot_field(H_tot,N_x/2,N_y/2,14,step,delta,delta_t);
@@ -232,12 +235,13 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
+        tempz = floor(9);
+        tempy = floor(N_y/2);
+
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,N_y/2,16,step,delta,delta_t);
+        plot_field(E_tot,N_x/2,tempy,tempz,step,delta,delta_t);
 %         view([0 0 1])
 
-        tempz = floor(16);
-        tempy = floor(N_y/2);
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
         temp = 0;
@@ -338,7 +342,7 @@ while stop_cond == false
     Ez_new = Ez_new.*pec_mask;
 
     % E-field Boundary Conditions
-    c_ = c(material);   
+       
     
     bc_offset = 2;
 
@@ -386,9 +390,9 @@ while stop_cond == false
     end
 
 end
-fprintf('Saving monitors...\n');
+fprintf('\nSaving monitors...\n');
 
-save('monitor.mat','monitor_values','monitor_names','delta_t','delta_z');
+save('monitor.mat','monitor_values','monitor_names','source_val_E','delta_t','delta_z');
 
 fprintf('Simulation end.\n');
 
