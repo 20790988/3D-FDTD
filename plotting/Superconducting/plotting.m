@@ -3,16 +3,16 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_1.mat";
+result_filename = "monitor_08_3.mat";
 
 %Line properties
     %distance between plates and width of line in meters
     d = 0.3e-6;
     w = 4e-6;
 
-    epsilon_r = 9.6;
+    epsilon_r = 4;
 
-    is_microstrip = true;
+    is_microstrip = false;
 
 %Sampling
 
@@ -38,6 +38,10 @@ result_filename = "monitor_04_1.mat";
     phase_distance_1 = 0;
     phase_distance_2 = 0;
 
+
+% Theoretical values
+    line_length = 2e-3;
+
 %=========================================%
 
 epsilon_0 = 8.8542e-12;
@@ -45,12 +49,12 @@ mu_0 = 1.2566e-6;
 
 if is_microstrip
     e_eff_0 = (epsilon_r+1)/2+(epsilon_r-1)/(2*sqrt(1+12*d/w));
-end
 
-if w/d <= 1
-    Z_0 = (60/sqrt(e_eff_0))*log((8*d)/(w)+(w)/(4*d));
-else
-    Z_0 = (120*pi)/(sqrt(e_eff_0)*(w/d+1.393+0.667*log(w/d+1.444)));
+    if w/d <= 1
+        Z_0 = (60/sqrt(e_eff_0))*log((8*d)/(w)+(w)/(4*d));
+    else
+        Z_0 = (120*pi)/(sqrt(e_eff_0)*(w/d+1.393+0.667*log(w/d+1.444)));
+    end
 end
 
 monitor = load(result_filename);
@@ -74,7 +78,7 @@ for i = 1:1:num_monitors
     num_cells = size(Ez,2);
     voltage_temp = sum(Ez,2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
-    voltage(i,:) = -voltage_temp(1:N);
+    voltage(i,:) = voltage_temp(1:N);
 end
 
 
@@ -87,7 +91,7 @@ ylabel('Voltage')
 
 
 if reference_index == 0 
-    reference = monitor.source_val_E;
+    reference = monitor.source_val_E(1:N).*0.0011;
 else
     reference = voltage(reference_index,:);
 end
@@ -130,12 +134,18 @@ f_x_2 = f_x_2.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_2));
 s11 = f_x_1./f_x_ref;
 s21 = f_x_2./f_x_ref;
 
-mag_phase_plot(x,[s11;s21],4,{'r--','b-.'})
+%theoretical
+s11_th = zeros(1,length(s11));
+beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
+s21_th = exp(-1i*beta*line_length);
+
+mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'r--','b-.','k--','k-.'})
 xlim([0 60])
 xlabel('freq (GHz)')
 subplot(2,1,1)
 legend('S11','S21')
 yticks([0:0.25:1.25])
+ylim([0,1.25]);
 
 c = 1/sqrt(epsilon_0*mu_0);
 %TM_0 surface wave mode critical freq

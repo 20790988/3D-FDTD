@@ -49,12 +49,12 @@ function [param, grid, source, monitor] = model_waveguide()
     
     %Grid size and variables
 
-    l_ = 10;
-    wGP = 20;
+    l_ = 5;
+    wGP = 10;
     hGP = 0.1;
     hD = 0.3;
     wSig = 4;
-    hAir = 10;
+    hAir = 4;
 
     M_x = l_;
     M_y = wGP;
@@ -65,7 +65,14 @@ function [param, grid, source, monitor] = model_waveguide()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 200e-12;
+    param.M_t_max = 100e-12;
+
+    % Field capture
+    field_capture = true;
+    field_cap_normal_direction = 1;
+    field_cap_x = 4;
+    field_cap_y = 0:delta_y:M_y;
+    field_cap_z = 0:delta_z:M_z;
     
 %============================================================%
 
@@ -79,23 +86,23 @@ function [param, grid, source, monitor] = model_waveguide()
     grid = ones(N{1},N{2},N{3});
     
 %====================MODEL SETUP====================%
-    grid(:,:,:) = FREE_SPACE;
+    grid(:,:,:) = DIELECTRIC;
     
-    origin = {0,M_y/2,hGP+3*delta_z};
+    origin = {0,M_y/2,M_z/2};
 
     %GP
      grid = add_cuboid(grid,delta,0,l_, ...
-        -wGP/2,wGP/2, ...
+        -wSig/2,wSig/2, ...
         -hGP,0, ...
         PEC, ...
         origin);
 
-     %Dielectric
-     grid = add_cuboid(grid,delta,0,l_, ...
-         -wGP/2,wGP/2, ...
-        0,hD, ...
-        DIELECTRIC, ...
-        origin);
+%      Dielectric
+%      grid = add_cuboid(grid,delta,0,l_, ...
+%          -wSig/2,wSig/2, ...
+%         0,hD, ...
+%         DIELECTRIC, ...
+%         origin);
 
      %Signal
      grid = add_cuboid(grid,delta,0,l_, ...
@@ -112,7 +119,7 @@ function [param, grid, source, monitor] = model_waveguide()
     source_y = [-wSig/2,wSig/2];
     source_z = [0, hD];
 
-    is_microstrip = true;
+    is_microstrip = false;
 
     d = 0.3;
     w = 4;
@@ -129,19 +136,30 @@ function [param, grid, source, monitor] = model_waveguide()
         (source_z(1)+1*delta_z):delta_z:source_z(2), delta, origin);
 
 %====================MONITOR SETUP====================%
-    N_temp = l_-1;
-    
-    monitor_y = [0,delta_y];
-    monitor_z = [0, hD];
+    if field_capture 
 
-    for ii = 1:N_temp
-        str = sprintf('port_1_%dmm',ii);
-        monitor(ii).name = str;
-        monitor(ii).coords = m_to_n(ii, ...
-            (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
-            (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
-        monitor(ii).normal_direction = 1;
+        str = sprintf('field_capture');
+        monitor(1).name = str;
+        monitor(1).coords = m_to_n(field_cap_x, field_cap_y, field_cap_z, ...
+            delta, {0,0,0});
+        monitor(1).normal_direction = field_cap_normal_direction;
+    else
+
+        N_temp = l_-1;
+        
+        monitor_y = [0,delta_y];
+        monitor_z = [0, hD];
+    
+        for ii = 1:N_temp
+            str = sprintf('port_1_%dmm',ii);
+            monitor(ii).name = str;
+            monitor(ii).coords = m_to_n(ii, ...
+                (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
+                (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
+            monitor(ii).normal_direction = 1;
+        end
     end
+
    
 %==================================================%
     if sum(grid==SUPERCONDUCTOR,'all') > 0 && param.sc_model_level == 0
