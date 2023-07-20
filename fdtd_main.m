@@ -4,12 +4,15 @@
 %  2023-04-20
 % 
 
-clear
+clear all
 
 fprintf('Start\n')
+main_timer = tic;
 %====================MODEL IMPORT=====================%
 
-    [param, material, source, monitor] = s04_Toepfer_Line;
+    gpu_accel = true;
+
+    [param, material, source, monitor] = s08_Toepfer_Line_Par;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -30,9 +33,6 @@ fprintf('Start\n')
     sigma_n = param.sigma_n;
     T_op = param.T_op;
     T_c = param.T_c;
-
-% Material at Border
-    border_material_index = param.border_material_index;
 
 % Grid and cell size
     N = param.N;
@@ -214,6 +214,58 @@ fprintf('Simulation start:\n  #Cells = %d\n  delta_x = %s m\n  delta_t = %s s\n'
 fprintf(strcat(datestr(datetime( ...
     'now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 
+if gpu_accel
+    pec_mask = gpuArray(pec_mask);
+    sc_mask = gpuArray(sc_mask);
+
+    C_a = gpuArray(C_a);
+    C_b = gpuArray(C_b);
+    
+    D_a = gpuArray(D_a);
+    D_b = gpuArray(D_b);
+    
+    c_ = gpuArray(c_);
+    
+    Ex_old_old = gpuArray(Ex_old_old);
+    Ey_old_old = gpuArray(Ey_old_old);
+    Ez_old_old = gpuArray(Ez_old_old);
+    
+    Ex_old = gpuArray(Ex_old);
+    Ex_new = gpuArray(Ex_new);
+    Ey_old = gpuArray(Ey_old);
+    Ey_new = gpuArray(Ey_new);
+    Ez_old = gpuArray(Ez_old);
+    Ez_new = gpuArray(Ez_new);
+    Hx_old = gpuArray(Hx_old);
+    Hx_new = gpuArray(Hx_new);
+    Hy_old = gpuArray(Hy_old);
+    Hy_new = gpuArray(Hy_new);
+    Hz_old = gpuArray(Hz_old);
+    Hz_new = gpuArray(Hz_new);
+
+    Hz_inc = gpuArray(Hz_inc);
+    Hy_inc = gpuArray(Hy_inc);
+    Ey_inc = gpuArray(Ey_inc);
+    Ez_inc = gpuArray(Ez_inc);
+      
+    %superconducting
+    J_sx_new = gpuArray(J_sx_new);
+    J_sy_new = gpuArray(J_sx_new);
+    J_sz_new = gpuArray(J_sz_new);
+    
+    % J_nx_new = gpuArray();
+    % J_ny_new = gpuArray();
+    % J_nz_new = gpuArray();
+    
+    J_sx_old = gpuArray(J_sx_old);
+    J_sy_old = gpuArray(J_sy_old);
+    J_sz_old = gpuArray(J_sz_old);
+    
+    % J_nx_old = gpuArray();
+    % J_ny_old = gpuArray();
+    % J_nz_old = gpuArray();
+end
+
 %====================LOOP START=====================%
 
 while stop_cond == false
@@ -239,8 +291,8 @@ while stop_cond == false
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,tempy,tempz,step,delta,delta_t);
-%         view([0 0 1])
+        plot_field(E_tot,sftf_x-1,tempy,tempz,step,delta,delta_t);
+         view([1 0 0])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
@@ -394,6 +446,7 @@ fprintf('\nSaving monitors...\n');
 
 save('monitor.mat','monitor_values','monitor_names','source_val_E','delta_t','delta_z');
 
+fprintf('Duration: %.0f seconds.\n',toc(main_timer));
 fprintf('Simulation end.\n');
 
 %====================Function Declarations====================%
@@ -419,6 +472,7 @@ function text_update(step,N_t_max,delta_t)
    reverseStr = repmat(sprintf('\b'), 1, length(msg));
    tic;
 end
+
 
 function [ii_,jj_,kk_] = unpack_coords(coord)
     ii_ = coord{1};

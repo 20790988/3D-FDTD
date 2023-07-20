@@ -139,13 +139,23 @@ s11_th = zeros(1,length(s11));
 beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
 s21_th = exp(-1i*beta*line_length);
 
-mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'r--','b-.','k--','k-.'})
-xlim([0 60])
+mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'r--','b-.','k--','k-.'});
+xlim([0 100]);
 xlabel('freq (GHz)')
 subplot(2,1,1)
 legend('S11','S21')
 yticks([0:0.25:1.25])
 ylim([0,1.25]);
+
+real_imag_plot(x,[s11;s21;s11_th;s21_th],5,{'r--','b-.','k--','k-.'});
+xlim([0 100]);
+xlabel('freq (GHz)')
+subplot(2,1,2)
+ylim([-1.25,1.25]);
+
+subplot(2,1,1)
+ylim([-1.25,1.25]);
+legend('S11','S21')
 
 c = 1/sqrt(epsilon_0*mu_0);
 %TM_0 surface wave mode critical freq
@@ -204,6 +214,49 @@ function mag_phase_plot(x,f_x,fig_no,linestyles)
     linkaxes([pl1, pl2],'x');
 end
 
+function real_imag_plot(x,f_x,fig_no,linestyles)
+    
+    figure(fig_no);
+
+    s = size(f_x);
+    s = s(1);
+    linestyles{s+1} = 0;
+
+    re = real(f_x);
+    pl1 = subplot(2,1,1);
+
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,re(i,:),linestyles{i});
+        else
+            plot(x,re(i,:));
+        end
+    end
+    hold off
+    
+    ylabel('Real')
+    grid on
+
+    pl2 = subplot(2,1,2);
+    im = imag(f_x);
+    
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,im(i,:),linestyles{i});
+        else
+            plot(x,im(i,:));
+        end
+    end
+    hold off
+    ylabel('Imag')
+    
+    grid on
+    
+    linkaxes([pl1, pl2],'x');
+end
+
 function time_plot(x,f_x,fig_no,linestyles)
     
     figure(fig_no);
@@ -222,6 +275,8 @@ function time_plot(x,f_x,fig_no,linestyles)
     hold off
     grid on
 end
+
+
 
 function pulse = gaus_derv(t,mu,sigma)
     pulse = (t-mu).*exp(-((t-mu).^2)/(2*sigma^2));

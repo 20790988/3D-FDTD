@@ -139,7 +139,7 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x)
 
     epsilon_0 = 8.8542e-12;
     mu_0 = 1.2566e-6;
-    e_eff = 6.493;
+    e_eff = 1;
     eta = sqrt(mu_0./(epsilon_0*e_eff));
     a = 2e-3/(13*delta_x);
 

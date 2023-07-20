@@ -23,9 +23,6 @@ function [param, grid, source, monitor] = model_waveguide()
     DIELECTRIC = 2;
     SUPERCONDUCTOR = 3;  
 
-    % Material at Border
-    param.border_material_index = 1;
-
     % Superconductivity
         %0 = no superconductivity
         %1 = two-fluid only
@@ -49,7 +46,7 @@ function [param, grid, source, monitor] = model_waveguide()
     
     %Grid size and variables
 
-    l_ = 5;
+    l_ = 20;
     wGP = 10;
     hGP = 0.1;
     hD = 0.3;
