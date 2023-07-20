@@ -46,12 +46,12 @@ function [param, grid, source, monitor] = model_waveguide()
     
     %Grid size and variables
 
-    l_ = 20;
+    l_ = 15;
     wGP = 10;
     hGP = 0.1;
     hD = 0.3;
     wSig = 4;
-    hAir = 4;
+    hAir = 6;
 
     M_x = l_;
     M_y = wGP;
@@ -67,9 +67,11 @@ function [param, grid, source, monitor] = model_waveguide()
     % Field capture
     field_capture = true;
     field_cap_normal_direction = 1;
-    field_cap_x = 4;
+    field_cap_x = 7.5;
     field_cap_y = 0:delta_y:M_y;
     field_cap_z = 0:delta_z:M_z;
+    field_cap_fields = [1,1,1,1,1,1];
+%     Ex Ey Ez Hx Hy Hz
     
 %============================================================%
 
@@ -140,6 +142,7 @@ function [param, grid, source, monitor] = model_waveguide()
         monitor(1).coords = m_to_n(field_cap_x, field_cap_y, field_cap_z, ...
             delta, {0,0,0});
         monitor(1).normal_direction = field_cap_normal_direction;
+        monitor(1).fields_to_monitor = field_cap_fields;
     else
 
         N_temp = l_-1;

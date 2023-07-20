@@ -11,6 +11,7 @@ main_timer = tic;
 %====================MODEL IMPORT=====================%
 
     gpu_accel = true;
+    should_plot_output = false;
 
     [param, material, source, monitor] = s08_Toepfer_Line_Par;
     
@@ -202,7 +203,16 @@ for num = 1:num_monitors
         rows = length(iii);
         cols = length(jjj);
     end
-    monitor_values{num} = zeros(rows,cols,N_t_max);
+    field_selector = monitor(num).fields_to_monitor;
+
+    for count = 1:6
+        if field_selector(count)
+            monitor_values{num}{count} = zeros(rows,cols,N_t_max);
+        else
+            monitor_values{num}{count} = 0;
+        end
+    end
+    
     monitor_names{num} = monitor(num).name;
 end
 
@@ -260,7 +270,7 @@ if gpu_accel
     J_sx_old = gpuArray(J_sx_old);
     J_sy_old = gpuArray(J_sy_old);
     J_sz_old = gpuArray(J_sz_old);
-    
+  
     % J_nx_old = gpuArray();
     % J_ny_old = gpuArray();
     % J_nz_old = gpuArray();
@@ -277,7 +287,7 @@ while stop_cond == false
 
   
     %====================PLOTTING START=====================%
-    if  step<0
+    if  should_plot_output
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %          plot_field(H_tot,N_x/2,N_y/2,14,step,delta,delta_t);
@@ -292,7 +302,7 @@ while stop_cond == false
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
         plot_field(E_tot,sftf_x-1,tempy,tempz,step,delta,delta_t);
-         view([1 0 0])
+%          view([1 0 0])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
@@ -426,14 +436,27 @@ while stop_cond == false
 
     %store values to monitors
     for num = 1:num_monitors
-%         num
         [iii,jjj,kkk] = unpack_coords(monitor(num).coords);
-%         iii
-%         jjj
-%         kkk
-%         monitor_values{num}(:,:,step+1)
-        monitor_values{num}(:,:,step+1) = Ez_old(iii,jjj,kkk);
-%         monitor_values{num}(:,:,step+1)
+
+        if monitor(num).fields_to_monitor(1)
+            monitor_values{num}{1}(:,:,step+1) = Ex_old(iii,jjj,kkk);
+        end
+        if monitor(num).fields_to_monitor(1)
+            monitor_values{num}{2}(:,:,step+1) = Ey_old(iii,jjj,kkk);
+        end
+        if monitor(num).fields_to_monitor(3)
+            monitor_values{num}{3}(:,:,step+1) = Ez_old(iii,jjj,kkk);
+        end
+        if monitor(num).fields_to_monitor(4)
+            monitor_values{num}{4}(:,:,step+1) = Hx_old(iii,jjj,kkk);
+        end
+        if monitor(num).fields_to_monitor(5)
+            monitor_values{num}{5}(:,:,step+1) = Hy_old(iii,jjj,kkk);
+        end
+        if monitor(num).fields_to_monitor(6)
+            monitor_values{num}{6}(:,:,step+1) = Hz_old(iii,jjj,kkk);
+        end
+
     end
 
     step = step+1;
