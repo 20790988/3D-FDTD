@@ -13,6 +13,9 @@ main_timer = tic;
     gpu_accel = true;
     should_plot_output = false;
 
+    use_bootstrapped_fields = true;
+    bootstrap_field_name = 'field_cap.mat';
+
     [param, material, source, monitor] = s08_Toepfer_Line_Par;
     
     sigma = param.material(1,:);
@@ -79,11 +82,23 @@ main_timer = tic;
     t = (0:N_t_max)*delta_t;
     [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
 
-    figure(1);
+    bootstrap = load(bootstrap_field_name);
+%     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
+    source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
+    source_field_Ez = permute(cell2mat(bootstrap.monitor_values{1}(3)),[3 1 2]);
+
+%     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
+    source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
+    source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
+
+
+
+    
+
+%     figure(1);
 %     plot(t,source_val_E),
 %     monitor.source_val_E = source_val_E;
    
-
     source_N_t_max = floor(source.t_max/delta_t);
 
 %====================SIMULATION SETUP AND INITIALISE=====================%
@@ -281,10 +296,12 @@ end
 while stop_cond == false
     text_update(step,N_t_max,delta_t)
 
-   
-    Ez_inc(1,source_y,source_z) = (source_val_E(step+1));
-    Hy_inc(1,source_y,source_z) = (source_val_H(step+1));
+    Ey_inc(1,:,:) = (source_field_Ey(step+500,:,:));
+    Ez_inc(1,:,:) = (source_field_Ez(step+500,:,:));
 
+    
+    Hy_inc(1,:,:) = (source_field_Hy(step+500,:,:));
+    Hz_inc(1,:,:) = (source_field_Hz(step+500,:,:));
   
     %====================PLOTTING START=====================%
     if  should_plot_output
@@ -297,11 +314,11 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(9);
+        tempz = floor(64);
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,sftf_x-1,tempy,tempz,step,delta,delta_t);
+        plot_field(E_tot,N_x/2,tempy,tempz,step,delta,delta_t);
 %          view([1 0 0])
 
         E_tot_line = (E_tot(:,tempy,tempz));
