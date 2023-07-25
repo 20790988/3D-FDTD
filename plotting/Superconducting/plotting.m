@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_08_3.mat";
+result_filename = "monitor_08_fix_3_long.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -20,14 +20,14 @@ result_filename = "monitor_08_3.mat";
     N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
-    k_fft = 8;
+    k_fft = 100;
 
     %how many samples of port 1 voltage are set to zero
     N_zero = 0;
 
 %Indices
     port_1_index = 1;
-    port_2_index = 4;
+    port_2_index = 13;
 
     reference_index = 2;
         %for index 0 the source values are used
@@ -40,7 +40,7 @@ result_filename = "monitor_08_3.mat";
 
 
 % Theoretical values
-    line_length = 2e-3;
+    line_length = 11e-6;
 
 %=========================================%
 
@@ -63,7 +63,7 @@ monitor_values = monitor.monitor_values;
 delta_t = monitor.delta_t;
 delta_x = monitor.delta_z;
 
-Ez = monitor_values{1};
+Ez = cell2mat(monitor_values{1}(3));
 
 N = length(Ez);
 
@@ -74,7 +74,7 @@ end
 num_monitors = length(monitor_values);
 
 for i = 1:1:num_monitors
-    Ez = monitor_values{i};
+    Ez = cell2mat(monitor_values{i}(3));
     num_cells = size(Ez,2);
     voltage_temp = sum(Ez,2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
@@ -147,7 +147,7 @@ legend('S11','S21')
 yticks([0:0.25:1.25])
 ylim([0,1.25]);
 
-real_imag_plot(x,[s11;s21;s11_th;s21_th],5,{'r--','b-.','k--','k-.'});
+real_imag_plot(x,[s11;s21],5,{'r--','b-.','k--','k-.'});
 xlim([0 100]);
 xlabel('freq (GHz)')
 subplot(2,1,2)
@@ -207,7 +207,7 @@ function mag_phase_plot(x,f_x,fig_no,linestyles)
     hold off
     ylabel('Phase (deg)')
     
-    yticks([-180 -90 0 90 180])
+%     yticks([-180 -90 0 90 180])
 
     grid on
     
