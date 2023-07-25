@@ -13,7 +13,7 @@ main_timer = tic;
     gpu_accel = true;
     should_plot_output = false;
 
-    use_bootstrapped_fields = true;
+    use_bootstrapped_fields = false;
     bootstrap_field_name = 'field_cap.mat';
 
     [param, material, source, monitor] = s08_Toepfer_Line_Par;
@@ -82,15 +82,16 @@ main_timer = tic;
     t = (0:N_t_max)*delta_t;
     [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
 
-    bootstrap = load(bootstrap_field_name);
-%     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
-    source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
-    source_field_Ez = permute(cell2mat(bootstrap.monitor_values{1}(3)),[3 1 2]);
-
-%     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
-    source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
-    source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
-
+    if use_bootstrapped_fields
+        bootstrap = load(bootstrap_field_name);
+    %     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
+        source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
+        source_field_Ez = permute(cell2mat(bootstrap.monitor_values{1}(3)),[3 1 2]);
+    
+    %     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
+        source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
+        source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
+    end
 
 
     
@@ -296,12 +297,19 @@ end
 while stop_cond == false
     text_update(step,N_t_max,delta_t)
 
-    Ey_inc(1,:,:) = (source_field_Ey(step+500,:,:));
-    Ez_inc(1,:,:) = (source_field_Ez(step+500,:,:));
-
+    if use_bootstrapped_fields
+        Ey_inc(1,:,:) = (source_field_Ey(step+500,:,:));
+        Ez_inc(1,:,:) = (source_field_Ez(step+500,:,:));
     
-    Hy_inc(1,:,:) = (source_field_Hy(step+500,:,:));
-    Hz_inc(1,:,:) = (source_field_Hz(step+500,:,:));
+        
+        Hy_inc(1,:,:) = (source_field_Hy(step+500,:,:));
+        Hz_inc(1,:,:) = (source_field_Hz(step+500,:,:));
+    else
+        Ez_inc(1,source_y,source_z) = source_val_E(step+1);
+
+        Hy_inc(1,source_y,source_z) = source_val_H(step+1);
+    end
+
   
     %====================PLOTTING START=====================%
     if  should_plot_output
