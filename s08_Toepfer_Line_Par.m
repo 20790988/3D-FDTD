@@ -36,10 +36,9 @@ function [param, grid, source, monitor] = model_waveguide()
         param.T_op = 4.2;
         param.T_c = 9.3;
     
+    unit = 1e-6;
 
     % Cell size in units 
-    unit = 1e-3;
-    
     delta_x = 0.05;
     delta_y = delta_x;
     delta_z = delta_x;
@@ -62,10 +61,10 @@ function [param, grid, source, monitor] = model_waveguide()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 100e-12;
+    param.M_t_max = 400e-15;
 
     % Field capture
-    field_capture = true;
+    field_capture = false;
     field_cap_normal_direction = 1;
     field_cap_x = 7.5;
     field_cap_y = 0:delta_y:M_y;
@@ -151,12 +150,13 @@ function [param, grid, source, monitor] = model_waveguide()
         monitor_z = [0, hD];
     
         for ii = 1:N_temp
-            str = sprintf('port_1_%dmm',ii);
+            str = sprintf('port_%dmm',ii);
             monitor(ii).name = str;
             monitor(ii).coords = m_to_n(ii, ...
                 (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
                 (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
             monitor(ii).normal_direction = 1;
+            monitor(ii).fields_to_monitor = [0,0,1,0,0,0];
         end
     end
 
@@ -197,9 +197,9 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x,e_eff
     GAUSDERV = 2;
     GAUSPULSE = 3;
 
-    signal_type = GAUSDERV;
-    t0 = 20e-12;
-    T = 5e-12;
+    signal_type = EXP;
+    t0 = 20e-15;
+    T = 5e-15;
 
     %========================================%
 
