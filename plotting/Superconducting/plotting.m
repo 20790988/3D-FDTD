@@ -20,7 +20,8 @@ result_filename = "monitor_08_fix_3_long.mat";
     N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
-    k_fft = 100;
+    k_fft = 1000;
+    N_fft_max = 1000;
 
     %how many samples of port 1 voltage are set to zero
     N_zero = 0;
@@ -105,6 +106,16 @@ F_ref = fft(reference,N_fft)/N_fft;
 
 x = (0:N_fft-1)/N_fft/delta_t/1e9;
 f = (0:N_fft-1)/N_fft/delta_t;
+
+if N_fft_max< length(F_k)
+    F_k = F_k(:,1:N_fft_max);
+    F_ref = F_ref(:,1:N_fft_max);
+
+    x = x(1:N_fft_max);
+    f = f(1:N_fft_max);
+end
+
+
 
 if is_microstrip
     G_f = (0.6+0.009*Z_0).*(((f/1e9)./(Z_0/(8*pi*(d*100)))).^2);
