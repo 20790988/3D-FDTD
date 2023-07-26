@@ -113,7 +113,7 @@ function [param, grid, source, monitor] = model_waveguide()
     %if t_max = 0 (default), source will continue as long as simulation
     source.t_max = 0;
 
-    source_x = 1;
+    source_x = 2;
     source_y = [-wSig/2,wSig/2];
     source_z = [0, hD];
 
@@ -156,7 +156,7 @@ function [param, grid, source, monitor] = model_waveguide()
                 (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
                 (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
             monitor(ii).normal_direction = 1;
-            monitor(ii).fields_to_monitor = [0,0,1,0,0,0];
+            monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
         end
     end
 
@@ -200,6 +200,7 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x,e_eff
     signal_type = EXP;
     t0 = 20e-15;
     T = 5e-15;
+    
 
     %========================================%
 
@@ -207,17 +208,19 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x,e_eff
     mu_0 = 1.2566e-6;
     eta = sqrt(mu_0./(epsilon_0*e_eff_0));
     a = 1;
+    
+    td = sqrt(mu_0.*(epsilon_0*e_eff_0))*0.5*delta_x-0.5*delta_t;
 
     if signal_type == EXP
         source_signal_E = -exp(-(t-t0).^2./(T^2))*a;
-        source_signal_H = exp(-(t-(t0-0.366*delta_t)).^2./(T^2))*a/eta;
+        source_signal_H = exp(-(t-t0- td).^2./(T^2))*a/eta;
     elseif signal_type == GAUSDERV
         source_signal_E = -gaus_derv(t,t0,T)*a;
-        source_signal_H = gaus_derv(t,t0-0.366*delta_t,T)*a/eta;
+        source_signal_H = gaus_derv(t-td,t0,T)*a/eta;
     elseif signal_type == GAUSPULSE
         t = t-t0;
         source_signal_E = -gauspuls(t,f0,bw)*a;
-        source_signal_H = gauspuls(t-0.366*delta_t,f0,bw)*a/eta;
+        source_signal_H = gauspuls(t- td,f0,bw)*a/eta;
     end
 
 end
