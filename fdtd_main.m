@@ -9,12 +9,15 @@ clear all
 fprintf('Start\n')
 main_timer = tic;
 %====================MODEL IMPORT=====================%
+    
+    TEMP_BOOTSTRAP_OFFSET = 300;
+
 
     gpu_accel = true;
     should_plot_output = false;
 
-    use_bootstrapped_fields = false;
-    bootstrap_field_name = 'field_cap.mat';
+    use_bootstrapped_fields = true;
+    bootstrap_field_name = 'field_cap_1.mat';
 
     [param, material, source, monitor] = s08_Toepfer_Line_Par;
     
@@ -83,6 +86,7 @@ main_timer = tic;
     [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
 
     if use_bootstrapped_fields
+        fprintf('Loading bootstrap fields...\n')
         bootstrap = load(bootstrap_field_name);
     %     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
         source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
@@ -91,6 +95,7 @@ main_timer = tic;
     %     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
         source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
         source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
+        fprintf('Loaded successfully\n')
     end
 
 
@@ -298,12 +303,12 @@ while stop_cond == false
     text_update(step,N_t_max,delta_t)
 
     if use_bootstrapped_fields
-        Ey_inc(1,:,:) = (source_field_Ey(step+500,:,:));
-        Ez_inc(1,:,:) = (source_field_Ez(step+500,:,:));
+        Ey_inc(1,:,:) = (source_field_Ey(step+TEMP_BOOTSTRAP_OFFSET,:,:));
+        Ez_inc(1,:,:) = (source_field_Ez(step+TEMP_BOOTSTRAP_OFFSET,:,:));
     
         
-        Hy_inc(1,:,:) = (source_field_Hy(step+500,:,:));
-        Hz_inc(1,:,:) = (source_field_Hz(step+500,:,:));
+        Hy_inc(1,:,:) = (source_field_Hy(step+TEMP_BOOTSTRAP_OFFSET,:,:));
+        Hz_inc(1,:,:) = (source_field_Hz(step+TEMP_BOOTSTRAP_OFFSET,:,:));
     else
         Ez_inc(1,source_y,source_z) = source_val_E(step+1);
 
@@ -485,14 +490,15 @@ while stop_cond == false
     end
 
     step = step+1;
-    if step >= N_t_max
+    if step >= N_t_max-TEMP_BOOTSTRAP_OFFSET
         stop_cond = true;
     end
 
 end
-fprintf('\nSaving monitors...\n');
+fprintf('\nSaving monitors (this might take a while)...\n');
 
-save('monitor.mat','monitor_values','monitor_names','source_val_E','delta_t','delta_z');
+save('monitor.mat','monitor_values','-v7.3');
+save('monitor.mat','monitor_names','source_val_E','delta_t','delta_z','-append');
 
 fprintf('Duration: %.0f seconds.\n',toc(main_timer));
 fprintf('Simulation end.\n');
