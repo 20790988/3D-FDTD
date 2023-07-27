@@ -9,8 +9,11 @@ DIELECTRIC = 3;
 SUPERCONDUCTOR = 4;
 
 %====================PLOT CONTROL====================%
-to_plot = [PEC];
+to_plot = [PEC,DIELECTRIC];
 plot_source = true;
+
+units_axis = 1e-6;
+units_axis_str = 'um';
 %===================================================%
 
 
@@ -34,9 +37,9 @@ delta_x = param.delta{1};
 delta_y = param.delta{2};
 delta_z = param.delta{3};
 
-plot_x = (0:s(1)+1)*delta_x;
-plot_y = (0:s(2)+1)*delta_y;
-plot_z = (0:s(3)+1)*delta_z;
+plot_x = (0:s(1)+1)*delta_x/units_axis;
+plot_y = (0:s(2)+1)*delta_y/units_axis;
+plot_z = (0:s(3)+1)*delta_z/units_axis;
 
 
 for i=to_plot
@@ -97,10 +100,13 @@ set(p4,'FaceColor',color{4});
 set(p5,'FaceColor',[1 0 0]);  
 
 legend([p1,p2,p3,p4,p5],{'PEC','AIR','DIELECTRIC','SUPERCONDUCTOR','SOURCE'})
-xlim([0 (s(2)+2).*delta_y]);
-ylim([0 (s(1)+2).*delta_x]);
-zlim([0 s(3).*delta_z]);
+xlim([0 (s(2)+2).*delta_y/units_axis]);
+ylim([0 (s(1)+2).*delta_x/units_axis]);
+zlim([0 s(3).*delta_z/units_axis]);
 
-ylabel('x (m)');
-xlabel('y (m)');
-zlabel('z (m)');
+ylabel(sprintf('x (%s)',units_axis_str));
+xlabel(sprintf('y (%s)',units_axis_str));
+zlabel(sprintf('z (%s)',units_axis_str));
+
+title(sprintf('Mesh size = %sm',num2eng(delta_x,useSI=true)))
+grid on
