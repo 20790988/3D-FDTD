@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_08_fix_3_long.mat";
+result_filename = "monitor_04_new_1.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -12,7 +12,7 @@ result_filename = "monitor_08_fix_3_long.mat";
 
     epsilon_r = 4;
 
-    is_microstrip = false;
+    is_microstrip = true;
 
 %Sampling
 
@@ -30,7 +30,7 @@ result_filename = "monitor_08_fix_3_long.mat";
     port_1_index = 1;
     port_2_index = 13;
 
-    reference_index = 2;
+    reference_index = 0;
         %for index 0 the source values are used
 
     %phase correction distance measured away from scattering object
@@ -92,7 +92,14 @@ ylabel('Voltage')
 
 
 if reference_index == 0 
-    reference = monitor.source_val_E(1:N).*0.0011;
+    reference = load('source_micro.mat').SOURCE;
+    reference = permute(reference,[2 3 1]);
+    num_cells = size(reference,2);
+    voltage_temp = sum(reference,2);
+    voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
+    voltage_temp(N) = 0;
+
+    reference = voltage_temp(1:N)';
 else
     reference = voltage(reference_index,:);
 end
@@ -130,7 +137,7 @@ f_x_2 = F_k(port_2_index,:);
 
 time_plot(t/1e-12,[reference; ...
     voltage(port_1_index,:); ...
-    voltage(port_2_index,:)],2,{'k','r--','b-.'})
+    voltage(port_2_index,:)],2,{'k','c--','b-.'})
 
 legend('Ref','Port 1','Port 2');
 
@@ -150,16 +157,23 @@ s11_th = zeros(1,length(s11));
 beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
 s21_th = exp(-1i*beta*line_length);
 
-mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'r--','b-.','k--','k-.'});
-xlim([0 100]);
+mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'c--','b-.','k--','k-.'});
+xlim([0 200]);
 xlabel('freq (GHz)')
 subplot(2,1,1)
 legend('S11','S21')
 yticks([0:0.25:1.25])
 ylim([0,1.25]);
 
-real_imag_plot(x,[s11;s21],5,{'r--','b-.','k--','k-.'});
-xlim([0 100]);
+mag_phase_plot(x,[s11;s21;s11_th;s21_th],6,{'c--','b-.','k--','k-.'},true);
+xlim([0 200]);
+xlabel('freq (GHz)')
+subplot(2,1,1)
+ylabel('Magnitude (dB)')
+legend('S11','S21')
+
+real_imag_plot(x,[s11;s21;s11_th;s21_th],5,{'c--','b-.','k--','k-.'});
+xlim([0 200]);
 xlabel('freq (GHz)')
 subplot(2,1,2)
 ylim([-1.25,1.25]);
@@ -180,15 +194,19 @@ xline(fT1,'k','LineWidth',1.5);
 xline(fT2,'k','LineWidth',1.5);
 
  
-function mag_phase_plot(x,f_x,fig_no,linestyles)
+function mag_phase_plot(x,f_x,fig_no,linestyles,dB_flag)
     
     figure(fig_no);
 
     s = size(f_x);
     s = s(1);
     linestyles{s+1} = 0;
-
+    
     mag = abs(f_x);
+    if exist('dB_flag','var') && dB_flag
+        mag = 20*log10(mag);
+    end
+    
     pl1 = subplot(2,1,1);
 
     hold on
