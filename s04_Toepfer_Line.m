@@ -23,9 +23,6 @@ function [param, grid, source, monitor] = model_waveguide()
     DIELECTRIC = 2;
     SUPERCONDUCTOR = 3;  
 
-    % Material at Border
-    param.border_material_index = 1;
-
     % Superconductivity
         %0 = no superconductivity
         %1 = two-fluid only
@@ -39,22 +36,21 @@ function [param, grid, source, monitor] = model_waveguide()
         param.T_op = 4.2;
         param.T_c = 9.3;
     
+    unit = 1e-6;
 
     % Cell size in units 
-    unit = 1e-3;
-    
     delta_x = 0.05;
     delta_y = delta_x;
     delta_z = delta_x;
     
     %Grid size and variables
 
-    l_ = 10;
-    wGP = 20;
+    l_ = 15;
+    wGP = 10;
     hGP = 0.1;
     hD = 0.3;
     wSig = 4;
-    hAir = 10;
+    hAir = 6;
 
     M_x = l_;
     M_y = wGP;
@@ -65,7 +61,16 @@ function [param, grid, source, monitor] = model_waveguide()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 200e-12;
+    param.M_t_max = 400e-15;
+
+    % Field capture
+    field_capture = false;
+    field_cap_normal_direction = 1;
+    field_cap_x = 9;
+    field_cap_y = 0:delta_y:M_y;
+    field_cap_z = 0:delta_z:M_z;
+    field_cap_fields = [0,1,1,0,1,1];
+%     Ex Ey Ez Hx Hy Hz
     
 %============================================================%
 
@@ -81,7 +86,7 @@ function [param, grid, source, monitor] = model_waveguide()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {0,M_y/2,hGP+3*delta_z};
+    origin = {0,M_y/2,M_z/2};
 
     %GP
      grid = add_cuboid(grid,delta,0,l_, ...
@@ -90,7 +95,7 @@ function [param, grid, source, monitor] = model_waveguide()
         PEC, ...
         origin);
 
-     %Dielectric
+%      Dielectric
      grid = add_cuboid(grid,delta,0,l_, ...
          -wGP/2,wGP/2, ...
         0,hD, ...
@@ -108,7 +113,7 @@ function [param, grid, source, monitor] = model_waveguide()
     %if t_max = 0 (default), source will continue as long as simulation
     source.t_max = 0;
 
-    source_x = 1;
+    source_x = 2;
     source_y = [-wSig/2,wSig/2];
     source_z = [0, hD];
 
@@ -129,19 +134,32 @@ function [param, grid, source, monitor] = model_waveguide()
         (source_z(1)+1*delta_z):delta_z:source_z(2), delta, origin);
 
 %====================MONITOR SETUP====================%
-    N_temp = l_-1;
-    
-    monitor_y = [0,delta_y];
-    monitor_z = [0, hD];
+    if field_capture 
 
-    for ii = 1:N_temp
-        str = sprintf('port_1_%dmm',ii);
-        monitor(ii).name = str;
-        monitor(ii).coords = m_to_n(ii, ...
-            (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
-            (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
-        monitor(ii).normal_direction = 1;
+        str = sprintf('field_capture');
+        monitor(1).name = str;
+        monitor(1).coords = m_to_n(field_cap_x, field_cap_y, field_cap_z, ...
+            delta, {0,0,0});
+        monitor(1).normal_direction = field_cap_normal_direction;
+        monitor(1).fields_to_monitor = field_cap_fields;
+    else
+
+        N_temp = l_-1;
+        
+        monitor_y = [0,delta_y];
+        monitor_z = [0, hD];
+    
+        for ii = 1:N_temp
+            str = sprintf('port_%dmm',ii);
+            monitor(ii).name = str;
+            monitor(ii).coords = m_to_n(ii, ...
+                (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
+                (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
+            monitor(ii).normal_direction = 1;
+            monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
+        end
     end
+
    
 %==================================================%
     if sum(grid==SUPERCONDUCTOR,'all') > 0 && param.sc_model_level == 0
@@ -179,9 +197,10 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x,e_eff
     GAUSDERV = 2;
     GAUSPULSE = 3;
 
-    signal_type = GAUSDERV;
-    t0 = 20e-12;
-    T = 5e-12;
+    signal_type = EXP;
+    t0 = 20e-15;
+    T = 5e-15;
+    
 
     %========================================%
 
@@ -189,17 +208,19 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x,e_eff
     mu_0 = 1.2566e-6;
     eta = sqrt(mu_0./(epsilon_0*e_eff_0));
     a = 1;
+    
+    td = sqrt(mu_0.*(epsilon_0*e_eff_0))*0.5*delta_x-0.5*delta_t;
 
     if signal_type == EXP
         source_signal_E = -exp(-(t-t0).^2./(T^2))*a;
-        source_signal_H = exp(-(t-(t0-0.366*delta_t)).^2./(T^2))*a/eta;
+        source_signal_H = exp(-(t-t0- td).^2./(T^2))*a/eta;
     elseif signal_type == GAUSDERV
         source_signal_E = -gaus_derv(t,t0,T)*a;
-        source_signal_H = gaus_derv(t,t0-0.366*delta_t,T)*a/eta;
+        source_signal_H = gaus_derv(t-td,t0,T)*a/eta;
     elseif signal_type == GAUSPULSE
         t = t-t0;
         source_signal_E = -gauspuls(t,f0,bw)*a;
-        source_signal_H = gauspuls(t-0.366*delta_t,f0,bw)*a/eta;
+        source_signal_H = gauspuls(t- td,f0,bw)*a/eta;
     end
 
 end
