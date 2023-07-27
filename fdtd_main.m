@@ -11,15 +11,15 @@ main_timer = tic;
 %====================MODEL IMPORT=====================%
     
     TEMP_BOOTSTRAP_OFFSET = 300;
-
+    window_bootstrap = false;
 
     gpu_accel = true;
     should_plot_output = false;
 
     use_bootstrapped_fields = true;
-    bootstrap_field_name = 'field_cap_1.mat';
+    bootstrap_field_name = 'field_cap_2.mat';
 
-    [param, material, source, monitor] = s08_Toepfer_Line_Par;
+    [param, material, source, monitor] = s04_Toepfer_Line;
     
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
@@ -95,6 +95,28 @@ main_timer = tic;
     %     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
         source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
         source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
+
+        if window_bootstrap
+            norm_window = abs(source_val_E./max(abs(source_val_E),[],'all'));
+
+            norm_window = permute(norm_window,[2 1 3]);
+
+            N_temp = N_t_max-TEMP_BOOTSTRAP_OFFSET+1;
+
+            source_field_Ey(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
+                source_field_Ey(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
+
+            source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
+                source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
+
+            source_field_Hy(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
+                source_field_Hy(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
+
+            source_field_Hz(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
+                source_field_Hz(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
+                
+        end
+
         fprintf('Loaded successfully\n')
     end
 
