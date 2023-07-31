@@ -16,7 +16,7 @@ main_timer = tic;
     gpu_accel = true;
     should_plot_output = false;
 
-    use_bootstrapped_fields = true;
+    use_bootstrapped_fields = false;
     bootstrap_field_name = 'field_cap_2.mat';
 
     [param, material, source, monitor] = s04_Toepfer_Line;
@@ -60,10 +60,13 @@ main_timer = tic;
     N_t_max = floor(param.M_t_max/delta_t);
 
 % Fix sigma
-    sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
+%     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
 
 % Space around E-field in grid cells
     offset = 3;
+
+% corner angle
+    cos_a = cos(pi/4);
 
 % Source plane
     source_coords = source.coord;
@@ -71,16 +74,6 @@ main_timer = tic;
     source_y = source_coords{2};
     source_z = source_coords{3};
 
-%     bootstrap = load("bootstrap.mat");
-%     bs_E = bootstrap.tempE;
-%     bs_E = bs_E./bs_E(1,N_y/2-0.5,N_z/2-0.5);
-% 
-%     bs_H = bootstrap.tempH;
-%     bs_H = bs_H./bs_H(1,N_y/2-0.5,N_z/2-0.5);
-
-
-%     source_val_x = source.value{1}((0:N_t_max)*delta_t);
-%     source_val_y = source.value{2}((0:N_t_max)*delta_t);
 
     t = (0:N_t_max)*delta_t;
     [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
@@ -119,15 +112,9 @@ main_timer = tic;
 
         fprintf('Loaded successfully\n')
     end
-
-
-    
-
-%     figure(1);
-%     plot(t,source_val_E),
-%     monitor.source_val_E = source_val_E;
    
     source_N_t_max = floor(source.t_max/delta_t);
+
 
 %====================SIMULATION SETUP AND INITIALISE=====================%
 
@@ -274,6 +261,11 @@ if gpu_accel
     C_a = gpuArray(C_a);
     C_b = gpuArray(C_b);
     
+    
+    if superconducting_model ~= 0
+        C_c = gpuArray(C_c);
+    end
+
     D_a = gpuArray(D_a);
     D_b = gpuArray(D_b);
     
@@ -467,11 +459,11 @@ while stop_cond == false
     Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
         Ez_new, Ez_old, Ez_old_old);
 
-    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
+    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
         Ex_new, Ex_old);
-    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
+    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
         Ey_new, Ey_old);
-    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, pi/4, ...
+    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
         Ez_new, Ez_old);
 
 
@@ -512,7 +504,8 @@ while stop_cond == false
     end
 
     step = step+1;
-    if step >= N_t_max-TEMP_BOOTSTRAP_OFFSET
+
+    if step >= N_t_max || (use_bootstrapped_fields && step >= N_t_max-TEMP_BOOTSTRAP_OFFSET)
         stop_cond = true;
     end
 
@@ -638,7 +631,7 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         +coeffs_3.* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5}));
 end
 
-function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, ...
+function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
     W_new, W_old)
 
     [delta_x, delta_y, delta_z] = unpack_coords(deltas);
@@ -668,7 +661,7 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, ...
                     coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
                     coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
                     W_new_(i0{ind}, j0{jnd}, k0{knd}) = ...
-                    mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1,...
+                    mur_abc_point(c, delta_t, delta_x, cos_a, coords_0, coords_1,...
                     W_new, W_old);   
                 end          
             end
@@ -677,16 +670,16 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, a, ...
 end
 
 
-function W_new_ = mur_abc_point(c, delta_t, delta_x, a, coords_0, coords_1, ...
+function W_new_ = mur_abc_point(c, delta_t, delta_x, cos_a, coords_0, coords_1, ...
     W_new, W_old)
-   
+    
     [ii_0,jj_0,kk_0] = unpack_coords(coords_0);
     [ii_1,jj_1,kk_1] = unpack_coords(coords_1);
 
     c_ = c(ii_0,jj_0,kk_0);
         
     W_new_ = W_old(ii_1,jj_1,kk_1) ...
-        + (c_*delta_t*cos(a)-delta_x)./(c_*delta_t*cos(a)+delta_x) ...
+        + (c_*delta_t*cos_a-delta_x)./(c_*delta_t*cos_a+delta_x) ...
         .*(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
 
 end

@@ -130,8 +130,8 @@ function [param, grid, source, monitor] = model_waveguide()
     end
 
     source.coord = m_to_n(source_x, ...
-        (source_y(1)+1*delta_y):delta_y:source_y(2), ...
-        (source_z(1)+1*delta_z):delta_z:source_z(2), delta, origin);
+        (source_y(1)*delta_y):delta_y:(source_y(2)-1*delta_y), ...
+        (source_z(1)*delta_z):delta_z:(source_z(2)-1*delta_z), delta, origin);
 
 %====================MONITOR SETUP====================%
     if field_capture 
@@ -153,8 +153,8 @@ function [param, grid, source, monitor] = model_waveguide()
             str = sprintf('port_%dmm',ii);
             monitor(ii).name = str;
             monitor(ii).coords = m_to_n(ii, ...
-                (monitor_y(1)+1*delta_y):delta_y:monitor_y(2), ...
-                (monitor_z(1)+1*delta_z):delta_z:monitor_z(2), delta, origin);
+                (monitor_y(1)*delta_y):delta_y:(monitor_y(2)-1*delta_y), ...
+                (monitor_z(1)*delta_z):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
             monitor(ii).normal_direction = 1;
             monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
         end
