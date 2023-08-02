@@ -4,23 +4,33 @@
 %  2023-04-20
 % 
 
-clear all
+clearvars
 
 fprintf('Start\n')
 main_timer = tic;
-%====================MODEL IMPORT=====================%
-    
+
+
+%====================SIMULATION SETTINGS=====================%        
+    [param, material, source, monitor] = s04_Toepfer_Line;
+
     TEMP_BOOTSTRAP_OFFSET = 300;
     window_bootstrap = false;
 
     gpu_accel = true;
     should_plot_output = false;
 
-    use_bootstrapped_fields = false;
-    bootstrap_field_name = 'field_cap_2.mat';
+    use_bootstrapped_fields = true;
+    bootstrap_field_name = 'field_cap_SC_.mat';
 
-    [param, material, source, monitor] = s04_Toepfer_Line;
+
+% Space around E-field in grid cells
+    offset = 3;
+    bc_offset = 2;
+
+% corner angle
+    cos_a = cos(pi/4);
     
+%====================MODEL IMPORT=====================%    
     sigma = param.material(1,:);
     sigma_m = param.material(2,:);
     
@@ -37,11 +47,12 @@ main_timer = tic;
     TWOFLUID = 1;
 
     lambda_L = param.lambda_L;
+    lambda_L_0 = param.lambda_L_0;
     sigma_n = param.sigma_n;
     T_op = param.T_op;
     T_c = param.T_c;
 
-% Grid and cell size
+
     N = param.N;
 
     N_x = N{1};
@@ -62,11 +73,7 @@ main_timer = tic;
 % Fix sigma
 %     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
 
-% Space around E-field in grid cells
-    offset = 3;
 
-% corner angle
-    cos_a = cos(pi/4);
 
 % Source plane
     source_coords = source.coord;
@@ -74,49 +81,29 @@ main_timer = tic;
     source_y = source_coords{2};
     source_z = source_coords{3};
 
+source_N_t_max = floor(source.t_max/delta_t);
 
-    t = (0:N_t_max)*delta_t;
-    [source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
+%====================SIMULATION SETUP AND INITIALISE=====================%   
 
-    if use_bootstrapped_fields
-        fprintf('Loading bootstrap fields...\n')
-        bootstrap = load(bootstrap_field_name);
-    %     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
-        source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
-        source_field_Ez = permute(cell2mat(bootstrap.monitor_values{1}(3)),[3 1 2]);
-    
-    %     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
-        source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
-        source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
+t = (0:N_t_max)*delta_t;
 
-        if window_bootstrap
-            norm_window = abs(source_val_E./max(abs(source_val_E),[],'all'));
+[source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
 
-            norm_window = permute(norm_window,[2 1 3]);
+if use_bootstrapped_fields
+    fprintf('Loading bootstrap fields...\n') %#ok<*UNRCH> 
 
-            N_temp = N_t_max-TEMP_BOOTSTRAP_OFFSET+1;
+    bootstrap = load(bootstrap_field_name);
+%     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
+    source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
+    source_field_Ez = permute(cell2mat(bootstrap.monitor_values{1}(3)),[3 1 2]);
 
-            source_field_Ey(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
-                source_field_Ey(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
+%     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
+    source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
+    source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
 
-            source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
-                source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
+    fprintf('Loaded successfully\n')
+end
 
-            source_field_Hy(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
-                source_field_Hy(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
-
-            source_field_Hz(TEMP_BOOTSTRAP_OFFSET:end,:,:) = ...
-                source_field_Hz(TEMP_BOOTSTRAP_OFFSET:end,:,:).*norm_window(1:N_temp);
-                
-        end
-
-        fprintf('Loaded successfully\n')
-    end
-   
-    source_N_t_max = floor(source.t_max/delta_t);
-
-
-%====================SIMULATION SETUP AND INITIALISE=====================%
 
 S = max(c)*delta_t/delta_x;
 
@@ -126,7 +113,9 @@ if S>1
 end
 
 %superconducting constants
-lambda_L = lambda_L/(sqrt(1-(T_op/T_c)^4));
+if lambda_L == 0
+    lambda_L = lambda_L_0/(sqrt(1-(T_op/T_c)^4));
+end
 
 alp_s = 1;
 gam_s = delta_t/(2*mu_0*lambda_L^2);
@@ -154,7 +143,6 @@ elseif superconducting_model == TWOFLUID
     C_c_single(1:2) = 0;
     C_c = C_c_single(material);
     
-   
 end
 
 D_a_single = (1-(sigma_m.*delta_t)./(2.*mu))./(1+(sigma_m.*delta_t)./(2.*mu));
@@ -165,9 +153,15 @@ material(material==0) = 1;
 
 sc_mask = (material == 3);
 
+% Don't update supercurrent inside boundary
+sc_mask([1:bc_offset,(N_x-bc_offset+1):N_x],:,:) = 0;
+sc_mask(:,[1:bc_offset,(N_y-bc_offset+1):N_y],:) = 0;
+sc_mask(:,:,[1:bc_offset,(N_z-bc_offset+1):N_z]) = 0;
+
+
+
 C_a = C_a_single(material);
 C_b = C_b_single(material);
-
 
 D_a = D_a_single(material);
 D_b = D_b_single(material);
@@ -261,7 +255,6 @@ if gpu_accel
     C_a = gpuArray(C_a);
     C_b = gpuArray(C_b);
     
-    
     if superconducting_model ~= 0
         C_c = gpuArray(C_c);
     end
@@ -295,7 +288,7 @@ if gpu_accel
       
     %superconducting
     J_sx_new = gpuArray(J_sx_new);
-    J_sy_new = gpuArray(J_sx_new);
+    J_sy_new = gpuArray(J_sy_new);
     J_sz_new = gpuArray(J_sz_new);
     
     % J_nx_new = gpuArray();
@@ -319,8 +312,7 @@ while stop_cond == false
     if use_bootstrapped_fields
         Ey_inc(1,:,:) = (source_field_Ey(step+TEMP_BOOTSTRAP_OFFSET,:,:));
         Ez_inc(1,:,:) = (source_field_Ez(step+TEMP_BOOTSTRAP_OFFSET,:,:));
-    
-        
+          
         Hy_inc(1,:,:) = (source_field_Hy(step+TEMP_BOOTSTRAP_OFFSET,:,:));
         Hz_inc(1,:,:) = (source_field_Hz(step+TEMP_BOOTSTRAP_OFFSET,:,:));
     else
@@ -328,7 +320,6 @@ while stop_cond == false
 
         Hy_inc(1,source_y,source_z) = source_val_H(step+1);
     end
-
   
     %====================PLOTTING START=====================%
     if  should_plot_output
@@ -341,7 +332,7 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(64);
+        tempz = floor(10);
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
@@ -450,7 +441,7 @@ while stop_cond == false
     % E-field Boundary Conditions
        
     
-    bc_offset = 2;
+    
 
     Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
         Ex_new, Ex_old, Ex_old_old);
@@ -475,8 +466,6 @@ while stop_cond == false
     Ex_old = Ex_new;
     Ey_old = Ey_new;
     Ez_old = Ez_new;
-    
-%     E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
 
     %store values to monitors
     for num = 1:num_monitors
@@ -514,6 +503,11 @@ fprintf('\nSaving monitors (this might take a while)...\n');
 
 save('monitor.mat','monitor_values','-v7.3');
 save('monitor.mat','monitor_names','source_val_E','delta_t','delta_z','-append');
+
+if use_bootstrapped_fields
+    source_from_bootstrap = source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,source_y,source_z);
+    save('monitor.mat','source_from_bootstrap','-append');
+end
 
 fprintf('Duration: %.0f seconds.\n',toc(main_timer));
 fprintf('Simulation end.\n');
@@ -634,7 +628,7 @@ end
 function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
     W_new, W_old)
 
-    [delta_x, delta_y, delta_z] = unpack_coords(deltas);
+    [delta_x, ~, ~] = unpack_coords(deltas);
     [N_x, N_y, N_z] = unpack_coords(Ns);
 
     ofs = offset;
@@ -653,10 +647,12 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
     i1 = {ofs+1, N_x-nfs-1,ii};
     j1 = {ofs+1, N_y-nfs-1,jj};
     k1 = {ofs+1, N_z-nfs-1,kk};
+    
+    
 
-    for ind = 3:-1:1
-        for jnd = 3:-1:1
-            for knd = 3:-1:1
+    for ind = 1:3
+        for jnd = 1:3
+            for knd = 1:3
                 if sum([ind==3,jnd==3,knd==3]) == 1
                     coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
                     coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
@@ -699,10 +695,6 @@ if exist('y_max','var')
      ylim([0 y_max]);
 end
 
-end
-
-function J_new = update_J(J_old,J_old_old,E_new,E_old_old,alp,xii,gam,delta_t)
-    J_new =alp*J_old+xii*J_old_old+(0.5*gam/delta_t)*(E_new-E_old_old);
 end
 
 function plot_field(field,slice_x,slice_y,slice_z,step,deltas,delta_t,c_max)

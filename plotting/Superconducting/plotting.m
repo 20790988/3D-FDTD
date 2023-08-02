@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_new_1.mat";
+result_filename = "monitor_04_SC_bootstrap.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -92,8 +92,10 @@ ylabel('Voltage')
 
 
 if reference_index == 0 
-    reference = load('source_micro.mat').SOURCE;
+    reference = monitor.source_from_bootstrap;
     reference = permute(reference,[2 3 1]);
+    middle = floor(size(reference,1)/2);
+    reference = reference(middle,:,:);
     num_cells = size(reference,2);
     voltage_temp = sum(reference,2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;

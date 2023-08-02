@@ -1,4 +1,4 @@
-function [param, grid, source, monitor] = model_waveguide()
+function [param, grid, source, monitor] = s04_Toepfer_Line()
     % Superconductor TM line
 
     param = struct('material',0);
@@ -25,10 +25,11 @@ function [param, grid, source, monitor] = model_waveguide()
 
     % Superconductivity
         %0 = no superconductivity
-        %1 = two-fluid only
-        param.sc_model_level = 0;
+        %1 = two-fluid
+        param.sc_model_level = 1;
 
         %lambda in m
+        param.lambda_L_0 = 0;
         param.lambda_L = 90e-9;
         %sigma in S/m
         param.sigma_n = 6.7e6;
@@ -50,7 +51,7 @@ function [param, grid, source, monitor] = model_waveguide()
     hGP = 0.1;
     hD = 0.3;
     wSig = 4;
-    hAir = 6;
+    hAir = 3;
 
     M_x = l_;
     M_y = wGP;
@@ -61,14 +62,14 @@ function [param, grid, source, monitor] = model_waveguide()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 400e-15;
+    param.M_t_max = 700e-15;
 
     % Field capture
     field_capture = false;
     field_cap_normal_direction = 1;
     field_cap_x = 9;
-    field_cap_y = 0:delta_y:M_y;
-    field_cap_z = 0:delta_z:M_z;
+    field_cap_y = 0:delta_y:M_y-1*delta_y;
+    field_cap_z = 0:delta_z:M_z-1*delta_z;
     field_cap_fields = [0,1,1,0,1,1];
 %     Ex Ey Ez Hx Hy Hz
     
@@ -78,7 +79,7 @@ function [param, grid, source, monitor] = model_waveguide()
     delta = {delta_x,delta_y,delta_z};
     param.delta = {delta_x*unit,delta_y*unit,delta_z*unit};
 
-    N = m_to_n(M_x,M_y,M_z,delta,{0,0,0});   
+    N = m_to_n(M_x-delta_x,M_y-delta_y,M_z-delta_z,delta,{0,0,0});   
     param.N = {N{1},N{2},N{3}};
 
     grid = ones(N{1},N{2},N{3});
@@ -86,13 +87,14 @@ function [param, grid, source, monitor] = model_waveguide()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {0,M_y/2,M_z/2};
+    origin = {0,M_y/2,10*delta_z};
+   
 
     %GP
      grid = add_cuboid(grid,delta,0,l_, ...
         -wGP/2,wGP/2, ...
         -hGP,0, ...
-        PEC, ...
+        SUPERCONDUCTOR, ...
         origin);
 
 %      Dielectric
@@ -106,7 +108,7 @@ function [param, grid, source, monitor] = model_waveguide()
      grid = add_cuboid(grid,delta,0,l_, ...
         -wSig/2,wSig/2, ...
         hD,hD+hGP, ...
-        PEC, ...
+        SUPERCONDUCTOR, ...
         origin);
 
 %====================SOURCE PROPERTIES====================%
@@ -130,8 +132,8 @@ function [param, grid, source, monitor] = model_waveguide()
     end
 
     source.coord = m_to_n(source_x, ...
-        (source_y(1)*delta_y):delta_y:(source_y(2)-1*delta_y), ...
-        (source_z(1)*delta_z):delta_z:(source_z(2)-1*delta_z), delta, origin);
+        (source_y(1)):delta_y:(source_y(2)-1*delta_y), ...
+        (source_z(1)):delta_z:(source_z(2)-1*delta_z), delta, origin);
 
 %====================MONITOR SETUP====================%
     if field_capture 
@@ -144,7 +146,7 @@ function [param, grid, source, monitor] = model_waveguide()
         monitor(1).fields_to_monitor = field_cap_fields;
     else
 
-        N_temp = l_-1;
+        N_temp = l_-1; %#ok<*UNRCH> 
         
         monitor_y = [0,delta_y];
         monitor_z = [0, hD];
@@ -288,7 +290,7 @@ function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material,rel
     min = m_to_n(xmin,ymin,zmin,delta,relative_to);
     max = m_to_n(xmax,ymax,zmax,delta,relative_to);
 
-    grid(min{1}:(max{1}-1),min{2}:(max{2}),min{3}:(max{3}-1)) = material;
+    grid(min{1}:(max{1}-1),min{2}:(max{2}-1),min{3}:(max{3}-1)) = material;
 
 end
 
