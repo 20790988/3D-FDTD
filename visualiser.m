@@ -9,7 +9,7 @@ DIELECTRIC = 3;
 SUPERCONDUCTOR = 4;
 
 %====================PLOT CONTROL====================%
-to_plot = [PEC,DIELECTRIC];
+to_plot = [SUPERCONDUCTOR,DIELECTRIC];
 plot_source = true;
 
 units_axis = 1e-6;
@@ -65,21 +65,23 @@ if plot_source
       
      s = size(newgrid);
     plot_grid = zeros(s);
-
-    source_x = source.coord{1};
-    source_y = source.coord{2};
-    source_z = source.coord{3};
-
-    plot_grid(source_x,source_y,source_z)  = 100;
-
-    k = 50;
-    p1 = patch(isosurface(plot_y,plot_x,plot_z,plot_grid,k));
-    p2 = patch(isocaps(plot_y,plot_x,plot_z,plot_grid,k));
-
-    set(p1,'FaceColor',[1 0 0]);  
-    set(p2,'FaceColor',[1 0 0]);  
-    set(p1,'EdgeColor','none');  
-    set(p2,'EdgeColor','none');  
+    
+    for ind = 1:length(source.coord)
+        source_x = source.coord{ind}{1};
+        source_y = source.coord{ind}{2};
+        source_z = source.coord{ind}{3};
+    
+        plot_grid(source_x,source_y,source_z)  = 100;
+    
+        k = 50;
+        p1 = patch(isosurface(plot_y,plot_x,plot_z,plot_grid,k));
+        p2 = patch(isocaps(plot_y,plot_x,plot_z,plot_grid,k));
+    
+        set(p1,'FaceColor',[1 0 0]);  
+        set(p2,'FaceColor',[1 0 0]);  
+        set(p1,'EdgeColor','none');  
+        set(p2,'EdgeColor','none');
+    end
 end
 
 camlight('right');

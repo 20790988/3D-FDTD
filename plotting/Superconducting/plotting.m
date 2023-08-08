@@ -3,16 +3,16 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_SC_bootstrap.mat";
+result_filename = "monitor_10_SC.mat";
 
 %Line properties
     %distance between plates and width of line in meters
     d = 0.3e-6;
     w = 4e-6;
 
-    epsilon_r = 4;
+    epsilon_r = 4.6;
 
-    is_microstrip = true;
+    is_microstrip = false;
 
 %Sampling
 
@@ -30,12 +30,12 @@ result_filename = "monitor_04_SC_bootstrap.mat";
     port_1_index = 1;
     port_2_index = 13;
 
-    reference_index = 0;
+    reference_index = 3;
         %for index 0 the source values are used
 
     %phase correction distance measured away from scattering object
     % in meters
-    phase_distance_ref = 0;
+    phase_distance_ref = 1e-6;
     phase_distance_1 = 0;
     phase_distance_2 = 0;
 
@@ -78,7 +78,7 @@ for i = 1:1:num_monitors
     Ez = cell2mat(monitor_values{i}(3));
     num_cells = size(Ez,2);
     voltage_temp = sum(Ez,2);
-    voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
+    voltage_temp = squeeze(voltage_temp)*num_cells;
     voltage(i,:) = voltage_temp(1:N);
 end
 

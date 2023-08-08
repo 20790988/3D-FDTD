@@ -11,7 +11,7 @@ main_timer = tic;
 
 
 %====================SIMULATION SETTINGS=====================%        
-    [param, material, source, monitor] = s04_Toepfer_Line;
+    [param, material, source, monitor] = s09_SFQLine;
 
     TEMP_BOOTSTRAP_OFFSET = 300;
     window_bootstrap = false;
@@ -19,7 +19,7 @@ main_timer = tic;
     gpu_accel = true;
     should_plot_output = false;
 
-    use_bootstrapped_fields = true;
+    use_bootstrapped_fields = false;
     bootstrap_field_name = 'field_cap_SC_.mat';
 
 
@@ -52,7 +52,6 @@ main_timer = tic;
     T_op = param.T_op;
     T_c = param.T_c;
 
-
     N = param.N;
 
     N_x = N{1};
@@ -74,12 +73,14 @@ main_timer = tic;
 %     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
 
 
-
 % Source plane
     source_coords = source.coord;
-    sftf_x = source_coords{1};
-    source_y = source_coords{2};
-    source_z = source_coords{3};
+    sftf_x = source_coords{1}{1};
+
+    for ind = 1:length(source_coords)
+        source_y{ind} = source_coords{ind}{2};
+        source_z{ind} = source_coords{ind}{3};
+    end
 
 source_N_t_max = floor(source.t_max/delta_t);
 
@@ -87,8 +88,11 @@ source_N_t_max = floor(source.t_max/delta_t);
 
 t = (0:N_t_max)*delta_t;
 
-[source_val_E,source_val_H] = source.value{3}(t,delta_t,delta_x,param.e_eff_0);
+for ind = 1:length(source_coords);
+    [source_val_E{ind},source_val_H{ind}] = source.value{3}(t,delta_t,delta_x,param.e_eff_0,ind);
+end
 
+% load bootstrap fields
 if use_bootstrapped_fields
     fprintf('Loading bootstrap fields...\n') %#ok<*UNRCH> 
 
@@ -104,7 +108,7 @@ if use_bootstrapped_fields
     fprintf('Loaded successfully\n')
 end
 
-
+% check stability
 S = max(c)*delta_t/delta_x;
 
 if S>1
@@ -153,13 +157,12 @@ material(material==0) = 1;
 
 sc_mask = (material == 3);
 
-% Don't update supercurrent inside boundary
-sc_mask([1:bc_offset,(N_x-bc_offset+1):N_x],:,:) = 0;
-sc_mask(:,[1:bc_offset,(N_y-bc_offset+1):N_y],:) = 0;
-sc_mask(:,:,[1:bc_offset,(N_z-bc_offset+1):N_z]) = 0;
+% Don't update supercurrent inside boundary - redundant
+% sc_mask([1:bc_offset,(N_x-bc_offset+1):N_x],:,:) = 0;
+% sc_mask(:,[1:bc_offset,(N_y-bc_offset+1):N_y],:) = 0;
+% sc_mask(:,:,[1:bc_offset,(N_z-bc_offset+1):N_z]) = 0;
 
-
-
+% expand material matrices
 C_a = C_a_single(material);
 C_b = C_b_single(material);
 
@@ -187,8 +190,8 @@ Hz_old = zeros(N_x,N_y,N_z);
 Hz_new = zeros(N_x,N_y,N_z);
 
 sftf_x = floor(sftf_x);
-source_y = floor(source_y);
-source_z = floor(source_z);
+% source_y = floor(source_y);
+% source_z = floor(source_z);
 
 Hz_inc = zeros(1,N_y,N_z);
 Hy_inc = zeros(1,N_y,N_z);
@@ -212,7 +215,7 @@ J_sz_old = zeros(N_x,N_y,N_z);
 % J_ny_old = zeros(N_x,N_y,N_z);
 % J_nz_old = zeros(N_x,N_y,N_z);
 
-%monitors
+% setup and preallocate monitors
 num_monitors = length(monitor);
 
 for num = 1:num_monitors
@@ -243,10 +246,7 @@ end
 step = 0;
 stop_cond = false;
 
-fprintf('Simulation start:\n  #Cells = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
-    ,N_x*N_y*N_z,num2eng(delta_x),num2eng(delta_t))
-fprintf(strcat(datestr(datetime( ...
-    'now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
+print_text_at_sim_start(N_x*N_y*N_z,delta_x,delta_t);
 
 if gpu_accel
     pec_mask = gpuArray(pec_mask);
@@ -316,9 +316,10 @@ while stop_cond == false
         Hy_inc(1,:,:) = (source_field_Hy(step+TEMP_BOOTSTRAP_OFFSET,:,:));
         Hz_inc(1,:,:) = (source_field_Hz(step+TEMP_BOOTSTRAP_OFFSET,:,:));
     else
-        Ez_inc(1,source_y,source_z) = source_val_E(step+1);
-
-        Hy_inc(1,source_y,source_z) = source_val_H(step+1);
+        for ind = 1:length(source_val_E)
+            Ez_inc(1,source_y{ind},source_z{ind}) = source_val_E{ind}(step+1);
+            Hy_inc(1,source_y{ind},source_z{ind}) = source_val_H{ind}(step+1);
+        end
     end
   
     %====================PLOTTING START=====================%
@@ -332,7 +333,7 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(10);
+        tempz = floor(17);
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
@@ -439,10 +440,6 @@ while stop_cond == false
     Ez_new = Ez_new.*pec_mask;
 
     % E-field Boundary Conditions
-       
-    
-    
-
     Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
         Ex_new, Ex_old, Ex_old_old);
     Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
@@ -456,7 +453,6 @@ while stop_cond == false
         Ey_new, Ey_old);
     Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
         Ez_new, Ez_old);
-
 
     % E-field increment
     Ex_old_old = Ex_old;
@@ -752,4 +748,12 @@ if exist('c_max','var')
      clim([0 c_max]);
 end
 
+end
+
+function print_text_at_sim_start(vol,delta_x,delta_t)
+    fprintf('Simulation start:\n  #Cells = %d\n  delta_x = %s m\n  delta_t = %s s\n'...
+    ,vol,num2eng(delta_x),num2eng(delta_t))
+
+    fprintf(strcat(datestr(datetime( ...
+    'now','TimeZone','local','Format','d-MM-y HH:mm:ss')),'\n'));
 end
