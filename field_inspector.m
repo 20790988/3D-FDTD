@@ -2,9 +2,9 @@ clear -except monitor
 close all
 
 %====================SETTINGS=====================%
-db_axis = false;
+db_axis = true;
 %=========================================%
-result_filename = "field_cap.mat";
+result_filename = "field_cap_2.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -28,12 +28,18 @@ N = length(Ez);
 
 num_monitors = length(monitor_values);
 
+% figure(2)
+% s = size(Ez);
+% plot(squeeze(Ez(floor(s(1)/2),floor(s(2)/2),:)));
+
 figure(1)
 
-E_max = max(Ez,[],"all");
+Ez = sqrt(Hx.^2+Hy.^2+Hz.^2);
 
+E_max = max(abs(Ez),[],"all");
 
-for ii = 1:N
+Ez = permute(Ez,[2 1 3]);
+for ii = 700:N
     if sum(Ez(:,:,ii),"all") == 0
         continue;
     end
@@ -42,13 +48,14 @@ for ii = 1:N
     title(ii);
     axis equal
     bar = colorbar();
-    ylabel(bar,'|A_{tot}| (V/m)');
+    ylabel(bar,'|E_{tot}| (V/m)');
     view([0 0 1]);
     if db_axis
         set(gca,'ColorScale','log')
-        clim([1e-6 E_max]);
+        clim([E_max*1e-3 E_max]);
     else
         clim([-E_max E_max]);
     end
+
     pause(0.001)
 end
