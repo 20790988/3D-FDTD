@@ -1,4 +1,5 @@
 clear
+close all
 
 % fstart = 3e9;
 % fstop = 5e9;
@@ -33,56 +34,63 @@ clear
 % 
 % % mag_phase_plot(n/N*fs/1e9,fft(ifft(F_k)),'freq GHz',4);
 
+f = 0:1e9:1e15;
 
-delta_t = 3.8516e-12;
-T_max = 519*delta_t;
-t = 0:delta_t:(T_max-delta_t);
-t = t-0.4e-9;
-t0 = 350*delta_t;
-T = 40*delta_t;
+t_n = 4.3e-15*(4.2/9.3)^(-4);
 
-% f_t = exp(-(t-t0).^2./(T^2));
-f_t = gauspuls(t,4e9,1);
+scale_1 = 1./((j*2*pi*f*t_n)+1);
 
-time_plot(t/1e-9,f_t,'t (ns)',1);
+t_n = 61e-15;
+scale_2 = 1./((j*2*pi*f*t_n)+1);
 
-mag_phase_plot((0:518)/518/delta_t/1e9,fft(f_t),'f (GHz)',3)
+mag_phase_plot(f,[scale_1;scale_2],1,{'r','b'});
 
-function mag_phase_plot(x,f_x,x_text,fig_no)
+
+function mag_phase_plot(x,f_x,fig_no,linestyles,dB_flag)
+    
     figure(fig_no);
-    pl1 = subplot(2,1,1);
+
+    s = size(f_x);
+    s = s(1);
+    linestyles{s+1} = 0;
+    
     mag = abs(f_x);
-    stem(x,mag);
+    if exist('dB_flag','var') && dB_flag
+        mag = 20*log10(mag);
+    end
+    
+    pl1 = subplot(2,1,1);
+
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,mag(i,:),linestyles{i});
+        else
+            plot(x,mag(i,:));
+        end
+    end
+    hold off
+    
     ylabel('Magnitude')
     grid on
 
     pl2 = subplot(2,1,2);
-    pha = angle(f_x);
-    pha(mag<1e-8) = 0;
-    stem(x,pha);
-    ylabel('Phase (rad)')
+    pha = angle(f_x)*180/pi;
     
-    temp_lim = ylim;
-    if(max(abs(temp_lim))<pi)
-        ylim([-pi pi])
+    hold on
+    for i = 1:s
+        if ~isempty(linestyles{i})
+            plot(x,pha(i,:),linestyles{i});
+        else
+            plot(x,pha(i,:));
+        end
     end
-    xlabel(x_text);
+    hold off
+    ylabel('Phase (deg)')
+    
+%     yticks([-180 -90 0 90 180])
+
     grid on
     
     linkaxes([pl1, pl2],'x');
-end
-
-function time_plot(x,f_x,x_text,fig_no,flip)
-    figure(fig_no);
-    N = length(x);
-    
-    if exist('flip','var') && flip
-        f_x = [f_x(N/2+1:N) f_x(1:N/2)];
-        x = [-x(N/2+1:-1:2) x(1:N/2)];
-    end
-    
-    plot(x,f_x);
-    ylabel('Amplitude')
-    xlabel(x_text);
-    grid on
 end

@@ -11,16 +11,17 @@ main_timer = tic;
 
 
 %====================SIMULATION SETTINGS=====================%        
-    [param, material, source, monitor] = s09_SFQLine;
+    [param, material, source, monitor] = s11_Via;
 
     TEMP_BOOTSTRAP_OFFSET = 300;
     window_bootstrap = false;
 
     gpu_accel = true;
     should_plot_output = false;
+    plot_interval = 50;
 
-    use_bootstrapped_fields = false;
-    bootstrap_field_name = 'field_cap_SC_.mat';
+    use_bootstrapped_fields = true;
+    bootstrap_field_name = 'field_cap_Via.mat';
 
 
 % Space around E-field in grid cells
@@ -145,7 +146,7 @@ elseif superconducting_model == TWOFLUID
     C_c_single = -1./(epsilon/delta_t + half_sum_gam + sigma/2);
 
     C_c_single(1:2) = 0;
-    C_c = C_c_single(material);
+    
     
 end
 
@@ -165,6 +166,11 @@ sc_mask = (material == 3);
 % expand material matrices
 C_a = C_a_single(material);
 C_b = C_b_single(material);
+
+if superconducting_model~=0
+    C_c = C_c_single(material);
+end
+
 
 D_a = D_a_single(material);
 D_b = D_b_single(material);
@@ -323,7 +329,7 @@ while stop_cond == false
     end
   
     %====================PLOTTING START=====================%
-    if  should_plot_output
+    if  should_plot_output && mod(step,plot_interval) ==0
         
 %         H_tot = sqrt(Hx_old.^2+Hy_old.^2+Hz_old.^2);
 %          plot_field(H_tot,N_x/2,N_y/2,14,step,delta,delta_t);
@@ -333,12 +339,12 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(17);
+        tempz = floor(41);
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,N_x/2,tempy,tempz,step,delta,delta_t);
-%          view([1 0 0])
+        plot_field(E_tot,[],tempy,tempz,step,delta,delta_t);
+          view([0 1 0])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
@@ -501,7 +507,7 @@ save('monitor.mat','monitor_values','-v7.3');
 save('monitor.mat','monitor_names','source_val_E','delta_t','delta_z','-append');
 
 if use_bootstrapped_fields
-    source_from_bootstrap = source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,source_y,source_z);
+    source_from_bootstrap = source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,source_y{2},source_z{2});
     save('monitor.mat','source_from_bootstrap','-append');
 end
 

@@ -1,4 +1,4 @@
-function [param, grid, source, monitor] = s09_SFQLine()
+function [param, grid, source, monitor] = s11_Via()
     % Superconductor TM line
 
     param = struct('material',0);
@@ -15,7 +15,7 @@ function [param, grid, source, monitor] = s09_SFQLine()
     % Material specification
     sigma = [0 0 0];
     sigma_m = [0 0 0];    
-    epsilon_r = [1 4 1];
+    epsilon_r = [1 4.6 1];
     mu_r = [1 1 1];
     
     PEC = 0;
@@ -52,7 +52,7 @@ function [param, grid, source, monitor] = s09_SFQLine()
     wSig = 4.4;
     wGP = 10;
 
-    hSim = 3;
+    hSim = 2.2;
 
     tLine = 0.2;
 
@@ -65,12 +65,12 @@ function [param, grid, source, monitor] = s09_SFQLine()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 700e-15;
+    param.M_t_max = 800e-15;
 
     % Field capture
     field_capture = false;
     field_cap_normal_direction = 1;
-    field_cap_x = 9;
+    field_cap_x = 12;
     field_cap_y = 0:delta_y:M_y-1*delta_y;
     field_cap_z = 0:delta_z:M_z-1*delta_z;
     field_cap_fields = [0,1,1,0,1,1];
@@ -90,7 +90,7 @@ function [param, grid, source, monitor] = s09_SFQLine()
 %====================MODEL SETUP====================%
     grid(:,:,:) = DIELECTRIC;
     
-    origin = {0,0,hSim/2-1};
+    origin = {0,0,4*delta_x};
 
      grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC,origin,{0,0,0});
      grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC,origin,{10,0,0});
@@ -112,6 +112,19 @@ function [param, grid, source, monitor] = s09_SFQLine()
         2*tLine,3*tLine, ...
         SUPERCONDUCTOR, ...
         origin);
+    
+     %PEC top & bottom
+     grid = add_cuboid(grid,delta,0,30, ...
+        0,wGP, ...
+        0,-1*tLine, ...
+        PEC, ...
+        origin);
+
+      grid = add_cuboid(grid,delta,0,30, ...
+        0,wGP, ...
+        9*tLine,10*tLine, ...
+        PEC, ...
+        origin);
 
 
 
@@ -121,11 +134,11 @@ function [param, grid, source, monitor] = s09_SFQLine()
 
     source_x{1} = 2;
     source_y{1} = [wGP/2-wSig/2, wGP/2+wSig/2];
-    source_z{1} = [tLine, tLine*2];
+    source_z{1} = [5 6].*tLine;
 
     source_x{2} = 2;
     source_y{2} = [wGP/2-wSig/2, wGP/2+wSig/2];
-    source_z{2} = [tLine*3, tLine*4];
+    source_z{2} = [7 8].*tLine;
 
     is_microstrip = false;
 
@@ -156,10 +169,10 @@ function [param, grid, source, monitor] = s09_SFQLine()
         monitor(1).fields_to_monitor = field_cap_fields;
     else
 
-        N_temp = l_-1; %#ok<*UNRCH> 
+        N_temp = 11; %#ok<*UNRCH> 
         
         monitor_y = [wGP/2,wGP/2+delta_y];
-        monitor_z = [tLine*1, tLine*2];
+        monitor_z = [7 8].*tLine;
     
         for ii = 1:N_temp
             str = sprintf('port_%dmm',ii);
@@ -169,6 +182,20 @@ function [param, grid, source, monitor] = s09_SFQLine()
                 (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
             monitor(ii).normal_direction = 1;
             monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
+        end
+
+
+        monitor_z = [3 4].*tLine;
+        for ii = 1:N_temp
+            x_ = ii+14;
+            jj = ii+N_temp;
+            str = sprintf('port_%dmm',x_);
+            monitor(jj).name = str;
+            monitor(jj).coords = m_to_n(x_, ...
+                (monitor_y(1)):delta_y:(monitor_y(2)-1*delta_y), ...
+                (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
+            monitor(jj).normal_direction = 1;
+            monitor(jj).fields_to_monitor = [0,0,1,0,1,0];
         end
     end
 

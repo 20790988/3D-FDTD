@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_10_SC.mat";
+result_filename = "monitor_11_BS.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -21,27 +21,27 @@ result_filename = "monitor_10_SC.mat";
 
     %upsampling factor for fft. N*k samples used
     k_fft = 1000;
-    N_fft_max = 1000;
+    N_fft_max = Inf;
 
     %how many samples of port 1 voltage are set to zero
     N_zero = 0;
 
 %Indices
     port_1_index = 1;
-    port_2_index = 13;
+    port_2_index = 20;
 
-    reference_index = 3;
+    reference_index = 0;
         %for index 0 the source values are used
 
     %phase correction distance measured away from scattering object
     % in meters
-    phase_distance_ref = 1e-6;
+    phase_distance_ref = 0;
     phase_distance_1 = 0;
     phase_distance_2 = 0;
 
 
 % Theoretical values
-    line_length = 11e-6;
+    line_length = 20e-6;
 
 %=========================================%
 
@@ -78,7 +78,7 @@ for i = 1:1:num_monitors
     Ez = cell2mat(monitor_values{i}(3));
     num_cells = size(Ez,2);
     voltage_temp = sum(Ez,2);
-    voltage_temp = squeeze(voltage_temp)*num_cells;
+    voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
     voltage(i,:) = voltage_temp(1:N);
 end
 
@@ -108,7 +108,9 @@ end
 
 N_fft = N*k_fft;
 
-voltage(1,1:N_zero) = 0;
+% reference(N_zero:end) = 0;
+% voltage(port_1_index,1:N_zero) = 0;
+
 
 F_k = fft(voltage,N_fft,2)/N_fft;
 F_ref = fft(reference,N_fft)/N_fft;
@@ -139,7 +141,7 @@ f_x_2 = F_k(port_2_index,:);
 
 time_plot(t/1e-12,[reference; ...
     voltage(port_1_index,:); ...
-    voltage(port_2_index,:)],2,{'k','c--','b-.'})
+    voltage(port_2_index,:)],2,{'k','r--','b-.'})
 
 legend('Ref','Port 1','Port 2');
 
@@ -159,30 +161,30 @@ s11_th = zeros(1,length(s11));
 beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
 s21_th = exp(-1i*beta*line_length);
 
-mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'c--','b-.','k--','k-.'});
-xlim([0 200]);
-xlabel('freq (GHz)')
-subplot(2,1,1)
-legend('S11','S21')
-yticks([0:0.25:1.25])
-ylim([0,1.25]);
+% mag_phase_plot(x,[s11;s21;s11_th;s21_th],4,{'r--','b-.','k--','k-.'});
+% xlim([0 200]);
+% xlabel('freq (GHz)')
+% subplot(2,1,1)
+% legend('S11','S21')
+% yticks([0:0.25:1.25])
+% ylim([0,1.25]);
 
-mag_phase_plot(x,[s11;s21;s11_th;s21_th],6,{'c--','b-.','k--','k-.'},true);
+mag_phase_plot(x,[s11;s21;s11_th;s21_th],6,{'r--','b-.','k--','k-.'},true);
 xlim([0 200]);
 xlabel('freq (GHz)')
 subplot(2,1,1)
 ylabel('Magnitude (dB)')
 legend('S11','S21')
 
-real_imag_plot(x,[s11;s21;s11_th;s21_th],5,{'c--','b-.','k--','k-.'});
-xlim([0 200]);
-xlabel('freq (GHz)')
-subplot(2,1,2)
-ylim([-1.25,1.25]);
-
-subplot(2,1,1)
-ylim([-1.25,1.25]);
-legend('S11','S21')
+% real_imag_plot(x,[s11;s21;s11_th;s21_th],5,{'r--','b-.','k--','k-.'});
+% xlim([0 200]);
+% xlabel('freq (GHz)')
+% subplot(2,1,2)
+% ylim([-1.25,1.25]);
+% 
+% subplot(2,1,1)
+% ylim([-1.25,1.25]);
+% legend('S11','S21')
 
 c = 1/sqrt(epsilon_0*mu_0);
 %TM_0 surface wave mode critical freq
