@@ -2,14 +2,14 @@ clearvars -except grid source param
 clf
 
 
-
+tic;
 PEC = 1;
 AIR = 2;
 DIELECTRIC = 3;
 SUPERCONDUCTOR = 4;
 
 %====================PLOT CONTROL====================%
-to_plot = [SUPERCONDUCTOR,DIELECTRIC];
+to_plot = [SUPERCONDUCTOR,PEC];
 plot_source = true;
 
 units_axis = 1e-6;
@@ -45,7 +45,7 @@ plot_z = (0:s(3)+1)*delta_z/units_axis;
 for i=to_plot
     
     s = size(newgrid);
-    plot_grid = zeros(s);
+    plot_grid = gpuArray(zeros(s));
 
     plot_grid(newgrid==material(i)) = 100;
 
@@ -112,3 +112,5 @@ zlabel(sprintf('z (%s)',units_axis_str));
 
 title(sprintf('Mesh size = %sm',num2eng(delta_x,useSI=true)))
 grid on
+
+toc;
