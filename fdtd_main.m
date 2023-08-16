@@ -11,17 +11,19 @@ main_timer = tic;
 
 
 %====================SIMULATION SETTINGS=====================%        
-    [param, material, source, monitor] = s11_Via;
+    [param, material, source, monitor, bootstrap_monitor] = s04_Toepfer_Line;
 
-    TEMP_BOOTSTRAP_OFFSET = 300;
-    window_bootstrap = false;
+
 
     gpu_accel = true;
     should_plot_output = false;
-    plot_interval = 50;
+    plot_interval = 10;
 
     use_bootstrapped_fields = true;
-    bootstrap_field_name = 'field_cap_Via.mat';
+    bootstrap_field_name = 'field_cap_toepfer.mat';
+
+    bootstrap_start_index = 300;
+    bootstrap_end_index = 6000;
 
 
 % Space around E-field in grid cells
@@ -69,6 +71,10 @@ main_timer = tic;
     
 % Simulation length
     N_t_max = floor(param.M_t_max/delta_t);
+    
+    if use_bootstrapped_fields
+        N_t_max = bootstrap_end_index-bootstrap_start_index;
+    end
 
 % Fix sigma
 %     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
@@ -99,12 +105,12 @@ if use_bootstrapped_fields
 
     bootstrap = load(bootstrap_field_name);
 %     source_field_Ex = permute(cell2mat(bootstrap.monitor_values{1}(1),[3 1 2]){};
-    source_field_Ey = permute(cell2mat(bootstrap.monitor_values{1}(2)),[3 1 2]);
-    source_field_Ez = permute(cell2mat(bootstrap.monitor_values{1}(3)),[3 1 2]);
+    source_field_Ey = permute(cell2mat(bootstrap.bootstrap_values{1}(2)),[3 1 2]);
+    source_field_Ez = permute(cell2mat(bootstrap.bootstrap_values{1}(3)),[3 1 2]);
 
 %     source_field_Hx = permute(bootstrap.monitor_values{1}(4),[3 1 2]);
-    source_field_Hy = permute(cell2mat(bootstrap.monitor_values{1}(5)),[3 1 2]);
-    source_field_Hz = permute(cell2mat(bootstrap.monitor_values{1}(6)),[3 1 2]);
+    source_field_Hy = permute(cell2mat(bootstrap.bootstrap_values{1}(5)),[3 1 2]);
+    source_field_Hz = permute(cell2mat(bootstrap.bootstrap_values{1}(6)),[3 1 2]);
 
     fprintf('Loaded successfully\n')
 end
@@ -249,6 +255,34 @@ for num = 1:num_monitors
     monitor_names{num} = monitor(num).name;
 end
 
+% setup and preallocate bootstrap
+capture_fields = param.field_capture;
+
+if capture_fields
+    for num = 1
+        [iii,jjj,kkk] = unpack_coords(bootstrap_monitor(num).coords);
+        if bootstrap_monitor(num).normal_direction == 1
+            rows = length(jjj);
+            cols = length(kkk);
+        elseif bootstrap_monitor(num).normal_direction == 2
+            rows = length(iii);
+            cols = length(kkk);
+        else
+            rows = length(iii);
+            cols = length(jjj);
+        end
+        field_selector = bootstrap_monitor(num).fields_to_monitor;
+    
+        for count = 1:6
+            if field_selector(count)
+                bootstrap_values{num}{count} = zeros(rows,cols,N_t_max);
+            else
+                bootstrap_values{num}{count} = 0;
+            end
+        end
+    end
+end
+
 step = 0;
 stop_cond = false;
 
@@ -316,11 +350,11 @@ while stop_cond == false
     text_update(step,N_t_max,delta_t)
 
     if use_bootstrapped_fields
-        Ey_inc(1,:,:) = (source_field_Ey(step+TEMP_BOOTSTRAP_OFFSET,:,:));
-        Ez_inc(1,:,:) = (source_field_Ez(step+TEMP_BOOTSTRAP_OFFSET,:,:));
+        Ey_inc(1,:,:) = (source_field_Ey(step+bootstrap_start_index,:,:));
+        Ez_inc(1,:,:) = (source_field_Ez(step+bootstrap_start_index,:,:));
           
-        Hy_inc(1,:,:) = (source_field_Hy(step+TEMP_BOOTSTRAP_OFFSET,:,:));
-        Hz_inc(1,:,:) = (source_field_Hz(step+TEMP_BOOTSTRAP_OFFSET,:,:));
+        Hy_inc(1,:,:) = (source_field_Hy(step+bootstrap_start_index,:,:));
+        Hz_inc(1,:,:) = (source_field_Hz(step+bootstrap_start_index,:,:));
     else
         for ind = 1:length(source_val_E)
             Ez_inc(1,source_y{ind},source_z{ind}) = source_val_E{ind}(step+1);
@@ -339,7 +373,7 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(41);
+        tempz = floor(10);
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
@@ -491,23 +525,54 @@ while stop_cond == false
         if monitor(num).fields_to_monitor(6)
             monitor_values{num}{6}(:,:,step+1) = Hz_old(iii,jjj,kkk);
         end
-
     end
 
+    %store values to bootstrap
+    if capture_fields
+        for num = 1
+            [iii,jjj,kkk] = unpack_coords(bootstrap_monitor(num).coords);
+    
+            if bootstrap_monitor(num).fields_to_monitor(1)
+                bootstrap_values{num}{1}(:,:,step+1) = Ex_old(iii,jjj,kkk);
+            end
+            if bootstrap_monitor(num).fields_to_monitor(1)
+                bootstrap_values{num}{2}(:,:,step+1) = Ey_old(iii,jjj,kkk);
+            end
+            if bootstrap_monitor(num).fields_to_monitor(3)
+                bootstrap_values{num}{3}(:,:,step+1) = Ez_old(iii,jjj,kkk);
+            end
+            if bootstrap_monitor(num).fields_to_monitor(4)
+                bootstrap_values{num}{4}(:,:,step+1) = Hx_old(iii,jjj,kkk);
+            end
+            if bootstrap_monitor(num).fields_to_monitor(5)
+                bootstrap_values{num}{5}(:,:,step+1) = Hy_old(iii,jjj,kkk);
+            end
+            if bootstrap_monitor(num).fields_to_monitor(6)
+                bootstrap_values{num}{6}(:,:,step+1) = Hz_old(iii,jjj,kkk);
+            end
+        end
+    end
     step = step+1;
 
-    if step >= N_t_max || (use_bootstrapped_fields && step >= N_t_max-TEMP_BOOTSTRAP_OFFSET)
+    if step >= N_t_max || ...
+            (use_bootstrapped_fields && step >= N_t_max)
         stop_cond = true;
     end
 
 end
-fprintf('\nSaving monitors (this might take a while)...\n');
+fprintf('\nSaving monitors...\n');
 
 save('monitor.mat','monitor_values','-v7.3');
 save('monitor.mat','monitor_names','source_val_E','delta_t','delta_z','-append');
 
+if capture_fields
+    fprintf('\nSaving bootstrap fields (this might take a while)...\n');
+    save('field_cap.mat','bootstrap_values','-v7.3');
+    save('field_cap.mat','delta_t','delta_z','-append');
+end
+
 if use_bootstrapped_fields
-    source_from_bootstrap = source_field_Ez(TEMP_BOOTSTRAP_OFFSET:end,source_y{2},source_z{2});
+    source_from_bootstrap = source_field_Ez(bootstrap_start_index:bootstrap_end_index,source_y{1},source_z{1});
     save('monitor.mat','source_from_bootstrap','-append');
 end
 
