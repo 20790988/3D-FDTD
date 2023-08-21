@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_11_BS.mat";
+result_filename = "monitor_04.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -12,7 +12,7 @@ result_filename = "monitor_11_BS.mat";
 
     epsilon_r = 4.6;
 
-    is_microstrip = false;
+    is_microstrip = true;
 
 %Sampling
 
@@ -21,14 +21,15 @@ result_filename = "monitor_11_BS.mat";
 
     %upsampling factor for fft. N*k samples used
     k_fft = 1000;
-    N_fft_max = Inf;
+    N_fft_max = 8000;
 
     %how many samples of port 1 voltage are set to zero
     N_zero = 0;
 
 %Indices
-    port_1_index = 1;
-    port_2_index = 20;
+    port_index = [1,2,3];
+
+    number_of_ports = length(port_index);
 
     reference_index = 0;
         %for index 0 the source values are used
@@ -36,12 +37,11 @@ result_filename = "monitor_11_BS.mat";
     %phase correction distance measured away from scattering object
     % in meters
     phase_distance_ref = 0;
-    phase_distance_1 = 0;
-    phase_distance_2 = 0;
+    phase_distance = [0 0 0];
 
 
 % Theoretical values
-    line_length = 20e-6;
+    line_length = 30e-6;
 
 %=========================================%
 
@@ -136,12 +136,12 @@ else
 end
 
 f_x_ref = F_ref;
-f_x_1 = F_k(port_1_index,:);
-f_x_2 = F_k(port_2_index,:);
+f_x = F_k(port_index,:);
 
 time_plot(t/1e-12,[reference; ...
-    voltage(port_1_index,:); ...
-    voltage(port_2_index,:)],2,{'k','r--','b-.'})
+    voltage(port_index(1),:); ...
+    voltage(port_index(2),:); ...
+    voltage(port_index(3),:)],2,{'k','r--','b-.'})
 
 legend('Ref','Port 1','Port 2');
 
@@ -150,14 +150,13 @@ ylabel('voltage (V)')
 
 %phase correction
 f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_ref));
-f_x_1 = f_x_1.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_1));
-f_x_2 = f_x_2.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_2));
+f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f).*(phase_distance'));
 
-s11 = f_x_1./f_x_ref;
-s21 = f_x_2./f_x_ref;
+sn1 = f_x./f_x_ref;
+
 
 %theoretical
-s11_th = zeros(1,length(s11));
+s11_th = zeros(1,length(sn1));
 beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
 s21_th = exp(-1i*beta*line_length);
 
@@ -169,8 +168,8 @@ s21_th = exp(-1i*beta*line_length);
 % yticks([0:0.25:1.25])
 % ylim([0,1.25]);
 
-mag_phase_plot(x,[s11;s21;s11_th;s21_th],6,{'r--','b-.','k--','k-.'},true);
-xlim([0 200]);
+mag_phase_plot(x,[sn1;s11_th;s21_th],6,{'r--','b-.','g-','k--','k-.'},true);
+xlim([0 500]);
 xlabel('freq (GHz)')
 subplot(2,1,1)
 ylabel('Magnitude (dB)')
