@@ -47,7 +47,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     %Grid size and variables
 
     l_ = 20;
-    w_ = 10;
+    w_ = 30;
     
     wSig = 4;
     wGP = 10;
@@ -67,7 +67,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 800e-15;
+    param.M_t_max = 1200e-15;
 
     % Field capture
     param.field_capture = false;
@@ -92,32 +92,39 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {0,M_y/2,tPEC};
+    origin = {0,0,tPEC};
 
      %PEC bottom
      grid = add_cuboid(grid,delta,0,l_, ...
-        -wGP/2,wGP/2, ...
+        0,w_, ...
         -tPEC,0, ...
         PEC, ...
         origin);
 
      %GND
      grid = add_cuboid(grid,delta,0,l_, ...
-        -wGP/2,wGP/2, ...
+        0,w_, ...
         0,tLine, ...
         SUPERCONDUCTOR, ...
         origin);
     
      %Dielectric
      grid = add_cuboid(grid,delta,0,l_, ...
-        -wGP/2,wGP/2, ...
+        0,w_, ...
         tLine,tLine+tDie, ...
         DIELECTRIC, ...
         origin);
 
-     %Sig
-     grid = add_cuboid(grid,delta,0,l_, ...
-        -wSig/2,wSig/2, ...
+     %Sig1
+     grid = add_cuboid(grid,delta,0,17, ...
+        15-wSig/2,15+wSig/2, ...
+        tLine+tDie,tLine+tDie+tLine, ...
+        SUPERCONDUCTOR, ...
+        origin);
+
+     %Sig2
+     grid = add_cuboid(grid,delta,13,17, ...
+        0,w_, ...
         tLine+tDie,tLine+tDie+tLine, ...
         SUPERCONDUCTOR, ...
         origin);
@@ -127,7 +134,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     source.t_max = 0;
 
     source_x{1} = 2;
-    source_y{1} = [-wSig/2, wSig/2];
+    source_y{1} = [13, 17];
     source_z{1} = [tLine tLine+tDie];
 
 %     source_x{2} = 2;
@@ -163,23 +170,43 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         bootstrap(1).fields_to_monitor = field_cap_fields;
     end
 
-    N_temp = l_-1; %#ok<*UNRCH> 
-    
-    monitor_y = [0,0+delta_y];
+
+    monitor_x = 1;
+    monitor_y = [15,15+delta_y];
     monitor_z = [tLine tLine+tDie];
 
-    for ii = 1:N_temp
-        str = sprintf('port_%dmm',ii);
-        monitor(ii).name = str;
-        monitor(ii).coords = m_to_n(ii, ...
-            (monitor_y(1)):delta_y:(monitor_y(2)-1*delta_y), ...
-            (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
-        monitor(ii).normal_direction = 1;
-        monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
-    end
-    
+    monitor(1).name = 'port_1';
+    monitor(1).coords = m_to_n(monitor_x, ...
+        (monitor_y(1)):delta_y:(monitor_y(2)-1*delta_y), ...
+        (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
+    monitor(1).normal_direction = 1;
+    monitor(1).fields_to_monitor = [0,0,1,0,1,0];
 
-   
+    monitor_x = [15,15+delta_x];
+    monitor_y = w_-1;
+    monitor_z = [tLine tLine+tDie];
+
+    monitor(2).name = 'port_2';
+    monitor(2).coords = m_to_n( ...
+        (monitor_x(1)):delta_x:(monitor_x(2)-1*delta_y), ...
+        monitor_y, ...
+        (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
+    monitor(2).normal_direction = 2;
+    monitor(2).fields_to_monitor = [0,0,1,0,1,0];
+
+    monitor_x = [15,15+delta_x];
+    monitor_y = 1;
+    monitor_z = [tLine tLine+tDie];
+
+    monitor(3).name = 'port_2';
+    monitor(3).coords = m_to_n( ...
+        (monitor_x(1)):delta_x:(monitor_x(2)-1*delta_y), ...
+        monitor_y, ...
+        (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
+    monitor(3).normal_direction = 2;
+    monitor(3).fields_to_monitor = [0,0,1,0,1,0];
+
+    
 %==================================================%
     if sum(grid==SUPERCONDUCTOR,'all') > 0 && param.sc_model_level == 0
         fprintf('Model contains superconductor but model level == 0\n');
