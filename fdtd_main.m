@@ -11,20 +11,21 @@ main_timer = tic;
 
 
 %====================SIMULATION SETTINGS=====================%        
-    [param, material, source, monitor, bootstrap_monitor] = s04_Toepfer_Line;
+    [param, material, source, monitor, bootstrap_monitor] = s06_Toepfer_Split;
 
 
 
     gpu_accel = true;
-    should_plot_output = false;
-    plot_interval = 10;
+    should_plot_output = true;
+    plot_interval = 50;
 
     use_bootstrapped_fields = true;
     bootstrap_field_name = 'field_cap_toepfer.mat';
 
+
     bootstrap_start_index = 300;
     bootstrap_end_index = 6000;
-
+    bootstrap_origin = [40,200,0];
 
 % Space around E-field in grid cells
     offset = 3;
@@ -72,9 +73,9 @@ main_timer = tic;
 % Simulation length
     N_t_max = floor(param.M_t_max/delta_t);
     
-    if use_bootstrapped_fields
-        N_t_max = bootstrap_end_index-bootstrap_start_index;
-    end
+%     if use_bootstrapped_fields
+%         N_t_max = bootstrap_end_index-bootstrap_start_index;
+%     end
 
 % Fix sigma
 %     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
@@ -350,11 +351,41 @@ while stop_cond == false
     text_update(step,N_t_max,delta_t)
 
     if use_bootstrapped_fields
-        Ey_inc(1,:,:) = (source_field_Ey(step+bootstrap_start_index,:,:));
-        Ez_inc(1,:,:) = (source_field_Ez(step+bootstrap_start_index,:,:));
-          
-        Hy_inc(1,:,:) = (source_field_Hy(step+bootstrap_start_index,:,:));
-        Hz_inc(1,:,:) = (source_field_Hz(step+bootstrap_start_index,:,:));
+        if step+bootstrap_start_index <= bootstrap_end_index
+        
+            s = size(source_field_Ey);
+    
+            Ey_inc(1, ...
+                bootstrap_origin(2)+offset:bootstrap_origin(2)+s(2)-offset+1 ...
+                ,bootstrap_origin(3)+offset:bootstrap_origin(3)+s(3)-offset+1)  ...
+                = (source_field_Ey(step+bootstrap_start_index, ...
+                offset:end-offset+1, ...
+                offset:end-offset+1));
+            Ez_inc(1, ...
+                bootstrap_origin(2)+offset:bootstrap_origin(2)+s(2)-offset+1 ...
+                ,bootstrap_origin(3)+offset:bootstrap_origin(3)+s(3)-offset+1)  ...
+                = (source_field_Ez(step+bootstrap_start_index, ...
+                offset:end-offset+1, ...
+                offset:end-offset+1));
+              
+            Hy_inc(1, ...
+                bootstrap_origin(2)+offset:bootstrap_origin(2)+s(2)-offset+1 ...
+                ,bootstrap_origin(3)+offset:bootstrap_origin(3)+s(3)-offset+1)  ...
+                = (source_field_Hy(step+bootstrap_start_index, ...
+                offset:end-offset+1, ...
+                offset:end-offset+1));
+            Hz_inc(1, ...
+                bootstrap_origin(2)+offset:bootstrap_origin(2)+s(2)-offset+1 ...
+                ,bootstrap_origin(3)+offset:bootstrap_origin(3)+s(3)-offset+1)  ...
+                = (source_field_Hz(step+bootstrap_start_index, ...
+                offset:end-offset+1, ...
+                offset:end-offset+1));
+        else
+            Ey_inc(:,:,:) = 0;
+            Ez_inc(:,:,:) = 0;
+            Hy_inc(:,:,:) = 0;
+            Hz_inc(:,:,:) = 0;
+        end
     else
         for ind = 1:length(source_val_E)
             Ez_inc(1,source_y{ind},source_z{ind}) = source_val_E{ind}(step+1);
@@ -377,8 +408,8 @@ while stop_cond == false
         tempy = floor(N_y/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,[],tempy,tempz,step,delta,delta_t);
-          view([0 1 0])
+        plot_field(E_tot,[],[],tempz,step,delta,delta_t);
+          view([0 0 1])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
@@ -572,7 +603,8 @@ if capture_fields
 end
 
 if use_bootstrapped_fields
-    source_from_bootstrap = source_field_Ez(bootstrap_start_index:bootstrap_end_index,source_y{1},source_z{1});
+    source_from_bootstrap = source_field_Ez(bootstrap_start_index:bootstrap_end_index, ...
+        source_y{1}-bootstrap_origin(2),source_z{1}-bootstrap_origin(3));
     save('monitor.mat','source_from_bootstrap','-append');
 end
 
