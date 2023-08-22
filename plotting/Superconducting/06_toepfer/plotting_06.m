@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04.mat";
+result_filename = "monitor_06.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -27,7 +27,7 @@ result_filename = "monitor_04.mat";
     N_zero = 0;
 
 %Indices
-    port_index = [1,17];
+    port_index = [1,2];
 
     number_of_ports = length(port_index);
 
@@ -162,10 +162,23 @@ s21_th = exp(-1i*beta*line_length);
 
 %inductex mag
 
+% freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
+% x_inductex = freq_inductex./1e9;
+% s11_inductex_mag=[-66.5558,-44.142,-38.5389,-35.2684,-33.0195];
+% s21_inductex_mag=[-9.5839E-7,-0.00016715,-0.00060734,-0.00128975,-0.00216477];
+
 freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
 x_inductex = freq_inductex./1e9;
-s11_inductex_mag=[-66.5558,-44.142,-38.5389,-35.2684,-33.0195];
-s21_inductex_mag=[-9.5839E-7,-0.00016715,-0.00060734,-0.00128975,-0.00216477];
+
+s21_inductex_mag=[-0.000207403,-0.0360251,-0.12969,-0.27171,-0.44896];
+
+s21_inductex_mag= s21_inductex_mag+20*log10(1/sqrt(2));
+
+
+s11_inductex_mag=[-43.2113,-20.831,-15.3147,-12.1731,-10.0794];
+
+
+
 
 %inductex phase
 v_p_triang = 113.03e6;
@@ -174,27 +187,37 @@ s21_inductex_phase_triang = exp(-j*2*pi*freq_inductex*15e-6/v_p_triang);
 v_p_tetra = 114.31e6;
 s21_inductex_phase_tetra = exp(-j*2*pi*freq_inductex*15e-6/v_p_tetra);
 
+%toepfer
+
+S11 = readmatrix('S11_toepferextract.csv');
+S21 = readmatrix('S21_toepferextract.csv');
+
+CORRECTION_TERM = 0.7366;
+
 figure(5);
 hold on
-plot(x,20*log10(abs(sn1(2,:))),'k')
+plot(x,20*log10(abs(sn1(2,:))),'b--',LineWidth=2);
 
-plot(x,20*log10(abs(s21_th)),'r')
+% plot(x,20*log10(abs(s21_th)),'b-.',LineWidth=2)
 
-plot(x_inductex,s21_inductex_mag,'g')
+plot(x_inductex,s21_inductex_mag,'r-.',LineWidth=2)
+
+
+plot(S21(:,1),S21(:,2),'k:',LineWidth=2);
 hold off
 ylabel('Magnitude')
 grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 ylabel('Magnitude (dB)')
-legend('FDTD s21','Theoretical S21','Inductex S21');
+legend('FDTD s21','Inductex s21','Toepfer S21');
+ylim([-5 0])
 
 figure(6);
 hold on
-plot(x,20*log10(abs(sn1(1,:))),'k')
-
-
-plot(x_inductex,s11_inductex_mag,'c')
+plot(x,20*log10(abs(sn1(1,:))),'b--',LineWidth=2)
+plot(x_inductex,s11_inductex_mag,'r-.',LineWidth=2)
+plot(S11(:,1),S11(:,2),'k:',LineWidth=2);
 
 hold off
 ylabel('Magnitude')
@@ -202,35 +225,36 @@ grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 ylabel('Magnitude (dB)')
-legend('FDTD s11','InductEx S11');
+legend('FDTD s11','Inductex s21','Toepfer S11');
+ylim([-70 0])
 
-figure(7);
-c = 3e8;
-hold on
-plot(x,-2*pi.*f.*15e-6./angle(sn1(2,:))./c,'b');
-plot(x,-2*pi.*f.*15e-6./angle(s21_th)./c,'r');
-yline(v_p_triang./c,'g');
-yline(v_p_tetra./c,'k');
-hold off
-ylabel('Phase Velocity normalised to speed of light')
-grid on
-xlim([0 500]);
-xlabel('freq (GHz)')
-legend('FDTD','Theoretical','InductEx triangle','Inductex tetra');
-ylim([0 1])
-
-figure(8);
-hold on
-plot(x,angle(sn1(2,:)).*180/pi,'b');
-plot(x,angle(s21_th).*180/pi,'r');
-plot(x_inductex,angle(s21_inductex_phase_triang).*180/pi,'g');
-plot(x_inductex,angle(s21_inductex_phase_tetra).*180/pi,'k');
-hold off
-ylabel('Phase angle (degrees)')
-grid on
-xlim([0 500]);
-xlabel('freq (GHz)')
-legend('FDTD','Theoretical','InductEx triangle','Inductex tetra');
+% figure(7);
+% c = 3e8;
+% hold on
+% plot(x,-2*pi.*f.*15e-6./angle(sn1(2,:))./c,'b--',LineWidth=2);
+% plot(x,-2*pi.*f.*15e-6./angle(s21_th)./c,'b-.',LineWidth=2);
+% yline(v_p_triang./c,'k--',LineWidth=2);
+% yline(v_p_tetra./c,'k-.',LineWidth=2);
+% hold off
+% ylabel('Phase Velocity normalised to speed of light')
+% grid on
+% xlim([0 500]);
+% xlabel('freq (GHz)')
+% legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
+% ylim([0 1])
+% 
+% figure(8);
+% hold on
+% plot(x,angle(sn1(2,:)).*180/pi,'b--',LineWidth=2);
+% plot(x,angle(s21_th).*180/pi,'b-.',LineWidth=2);
+% plot(x_inductex,angle(s21_inductex_phase_triang).*180/pi,'k--',LineWidth=2);
+% plot(x_inductex,angle(s21_inductex_phase_tetra).*180/pi,'k-.',LineWidth=2);
+% hold off
+% ylabel('Phase angle (degrees)')
+% grid on
+% xlim([0 500]);
+% xlabel('freq (GHz)')
+% legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
 
 
 
