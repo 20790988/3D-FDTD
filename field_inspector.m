@@ -34,18 +34,37 @@ plot(squeeze(Ez(floor(s(1)/2),10,:)));
 
 figure(1)
 
-% Ez = sqrt(Hx.^2+Hy.^2+Hz.^2);
+Hz = sqrt(Hx.^2+Hy.^2+Hz.^2);
 Ez = sqrt(Ex.^2+Ey.^2+Ez.^2);
 
 E_max = max(abs(Ez),[],"all");
+H_max = max(abs(Hz),[],"all");
+
 
 Ez = permute(Ez,[2 1 3]);
+Hz = permute(Hz,[2 1 3]);
 for ii = 1:N
     if sum(Ez(:,:,ii),"all") == 0
         continue;
     end
+    figure(1)
     colormap jet
     surf(Ez(:,:,ii),LineStyle="none");
+    title(ii);
+    axis equal
+    bar = colorbar();
+    ylabel(bar,'|E_{tot}| (V/m)');
+    view([0 0 1]);
+    if db_axis
+        set(gca,'ColorScale','log')
+        clim([E_max*1e-3 E_max]);
+    else
+        clim([-E_max E_max]);
+    end
+
+    figure(2)
+    colormap jet
+    surf(Hz(:,:,ii),LineStyle="none");
     title(ii);
     axis equal
     bar = colorbar();
@@ -53,9 +72,9 @@ for ii = 1:N
     view([0 0 1]);
     if db_axis
         set(gca,'ColorScale','log')
-        clim([E_max*1e-3 E_max]);
+        clim([H_max*1e-3 H_max]);
     else
-        clim([-E_max E_max]);
+        clim([-H_max H_max]);
     end
 
     pause(0.001)

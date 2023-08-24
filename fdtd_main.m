@@ -11,21 +11,21 @@ main_timer = tic;
 
 
 %====================SIMULATION SETTINGS=====================%        
-    [param, material, source, monitor, bootstrap_monitor] = s06_Toepfer_Split;
+    [param, material, source, monitor, bootstrap_monitor] = s04_Toepfer_Line;
 
 
 
     gpu_accel = true;
-    should_plot_output = true;
+    should_plot_output = false;
     plot_interval = 50;
 
     use_bootstrapped_fields = true;
-    bootstrap_field_name = 'field_cap_toepfer.mat';
+    bootstrap_field_name = 'field_cap_toepfer_no_pec.mat';
 
 
     bootstrap_start_index = 300;
     bootstrap_end_index = 6000;
-    bootstrap_origin = [40,200,0];
+    bootstrap_origin = [40,0,0];
 
 % Space around E-field in grid cells
     offset = 3;

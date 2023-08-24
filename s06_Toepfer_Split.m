@@ -52,10 +52,9 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     wSig = 4;
     wGP = 10;
 
-    hSim = 2.5;
-
     tLine = 0.1;
-    tPEC = 4*delta_x;
+    tAirBelow = 1.75;
+    hSim = 2.5+tAirBelow;
     tDie = 0.3;
 
     M_x = l_;
@@ -92,14 +91,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {0,0,tPEC};
-
-     %PEC bottom
-     grid = add_cuboid(grid,delta,0,l_, ...
-        0,w_, ...
-        -tPEC,0, ...
-        PEC, ...
-        origin);
+    origin = {0,0,tAirBelow};
 
      %GND
      grid = add_cuboid(grid,delta,0,l_, ...

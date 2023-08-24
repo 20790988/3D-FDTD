@@ -148,24 +148,16 @@ xlabel('time (ps)')
 ylabel('voltage (V)')
 
 %phase correction
-f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_ref));
-f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f).*(phase_distance'));
+% f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_ref));
+% f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f).*(phase_distance'));
 
 sn1 = f_x./f_x_ref;
-
 
 %theoretical PEC
 
 s11_th = zeros(1,length(sn1));
 beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
 s21_th = exp(-1i*beta*line_length);
-
-%inductex mag
-
-% freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
-% x_inductex = freq_inductex./1e9;
-% s11_inductex_mag=[-66.5558,-44.142,-38.5389,-35.2684,-33.0195];
-% s21_inductex_mag=[-9.5839E-7,-0.00016715,-0.00060734,-0.00128975,-0.00216477];
 
 freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
 x_inductex = freq_inductex./1e9;
@@ -176,16 +168,6 @@ s21_inductex_mag= s21_inductex_mag+20*log10(1/sqrt(2));
 
 
 s11_inductex_mag=[-43.2113,-20.831,-15.3147,-12.1731,-10.0794];
-
-
-
-
-%inductex phase
-v_p_triang = 113.03e6;
-s21_inductex_phase_triang = exp(-j*2*pi*freq_inductex*15e-6/v_p_triang);
-
-v_p_tetra = 114.31e6;
-s21_inductex_phase_tetra = exp(-j*2*pi*freq_inductex*15e-6/v_p_tetra);
 
 %toepfer
 
