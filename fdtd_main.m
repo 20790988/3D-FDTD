@@ -13,14 +13,14 @@ main_timer = tic;
 %====================SIMULATION SETTINGS=====================%        
     [param, material, source, monitor, bootstrap_monitor] = s04_Toepfer_Line;
 
-
-
     gpu_accel = true;
     should_plot_output = false;
     plot_interval = 50;
 
-    use_bootstrapped_fields = true;
-    bootstrap_field_name = 'field_cap_toepfer_no_pec.mat';
+    mur_bc_order = 1;
+
+    use_bootstrapped_fields = false;
+    bootstrap_field_name = 'field_cap_toepfer_ABC.mat';
 
 
     bootstrap_start_index = 300;
@@ -166,9 +166,9 @@ material(material==0) = 1;
 sc_mask = (material == 3);
 
 % Don't update supercurrent inside boundary - redundant
-% sc_mask([1:bc_offset,(N_x-bc_offset+1):N_x],:,:) = 0;
-% sc_mask(:,[1:bc_offset,(N_y-bc_offset+1):N_y],:) = 0;
-% sc_mask(:,:,[1:bc_offset,(N_z-bc_offset+1):N_z]) = 0;
+sc_mask([1,N_x],:,:) = 0;
+sc_mask(:,[1,N_y],:) = 0;
+sc_mask(:,:,[1,N_z]) = 0;
 
 % expand material matrices
 C_a = C_a_single(material);
@@ -185,9 +185,9 @@ D_b = D_b_single(material);
 c_ = c(material);
 
 % matrix declaration
-Ex_old_old = zeros(N_x,N_y,N_z);
-Ey_old_old = zeros(N_x,N_y,N_z);
-Ez_old_old = zeros(N_x,N_y,N_z);
+% Ex_old_old = zeros(N_x,N_y,N_z);
+% Ey_old_old = zeros(N_x,N_y,N_z);
+% Ez_old_old = zeros(N_x,N_y,N_z);
 
 Ex_old = zeros(N_x,N_y,N_z);
 Ex_new = zeros(N_x,N_y,N_z);
@@ -305,9 +305,9 @@ if gpu_accel
     
     c_ = gpuArray(c_);
     
-    Ex_old_old = gpuArray(Ex_old_old);
-    Ey_old_old = gpuArray(Ey_old_old);
-    Ez_old_old = gpuArray(Ez_old_old);
+%     Ex_old_old = gpuArray(Ex_old_old);
+%     Ey_old_old = gpuArray(Ey_old_old);
+%     Ez_old_old = gpuArray(Ez_old_old);
     
     Ex_old = gpuArray(Ex_old);
     Ex_new = gpuArray(Ex_new);
@@ -349,6 +349,8 @@ end
 
 while stop_cond == false
     text_update(step,N_t_max,delta_t)
+    
+    %find source field distributions
 
     if use_bootstrapped_fields
         if step+bootstrap_start_index <= bootstrap_end_index
@@ -404,12 +406,13 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(10);
+        tempz = floor(8);
         tempy = floor(N_y/2);
+        tempx = floor(N_x/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,[],[],tempz,step,delta,delta_t);
-          view([0 0 1])
+        plot_field(E_tot,1,1,1,step,delta,delta_t,1);
+%           view([0 0 1])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
@@ -417,13 +420,132 @@ while stop_cond == false
     end
     %====================PLOTTING END=====================%
 
-    % H-field calculate
-    hofs = offset-1;
-    hnfs = offset-2;
+    % E-field calculate
+    if superconducting_model == NONE
+        ii = 1:N_x-1;
+        jj = 2:N_y;
+        kk = 2:N_z;
 
-    ii = hofs:N_x-hnfs;
-    jj = hofs:N_y-hnfs;
-    kk = hofs:N_z-hnfs;
+        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
+            + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk));
+    
+        ii = 2:N_x;
+        jj = 1:N_y-1;
+        kk = 2:N_z;
+            
+        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
+            + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk));
+        
+        ii = 2:N_x;
+        jj = 2:N_y;
+        kk = 1:N_z-1;
+
+        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
+            + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk));
+
+    elseif superconducting_model == TWOFLUID      
+        %update E n+1
+        ii = 2:N_x-1;
+        jj = 2:N_y-1;
+        kk = 2:N_z-1;
+
+        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
+            + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk)) ...
+            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sx_old(ii,jj,kk);
+        
+        J_sx_new(ii,jj,kk) = alp_s*J_sx_old(ii,jj,kk) ...
+            +gam_s*(Ex_new(ii,jj,kk)+Ex_old(ii,jj,kk));
+
+%         ii = 2:N_x;
+%         jj = 1:N_y-1;
+%         kk = 2:N_z;
+
+        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
+            + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk)) ...
+            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sy_old(ii,jj,kk);
+
+       J_sy_new(ii,jj,kk) = alp_s*J_sy_old(ii,jj,kk) ...
+            +gam_s*(Ey_new(ii,jj,kk)+Ey_old(ii,jj,kk));
+    
+%         ii = 2:N_x;
+%         jj = 2:N_y;
+%         kk = 1:N_z-1;
+
+        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
+            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
+            + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk)) ...
+            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sz_old(ii,jj,kk);   
+
+       J_sz_new(ii,jj,kk) = alp_s*J_sz_old(ii,jj,kk) ...
+           +gam_s*(Ez_new(ii,jj,kk)+Ez_old(ii,jj,kk));
+
+
+        J_sx_old = J_sx_new.*sc_mask;
+        J_sy_old = J_sy_new.*sc_mask;
+        J_sz_old = J_sz_new.*sc_mask;
+        
+%         J_nx_old = J_nx_new.*sc_mask;
+%         J_ny_old = J_ny_new.*sc_mask;
+%         J_nz_old = J_nz_new.*sc_mask;
+    end
+
+    %SFTF source insert
+%     jj = 1:N_y-1;
+%     kk = 2:N_z;
+    Ey_new(sftf_x,jj,kk) = Ey_new(sftf_x,jj,kk) ...
+        + C_b(sftf_x,jj,kk).*Hz_inc(1,jj,kk);
+
+%     jj = 2:N_y;
+%     kk = 1:N_z-1;
+    Ez_new(sftf_x,jj,kk) = Ez_new(sftf_x,jj,kk) ...
+        - C_b(sftf_x,jj,kk).*Hy_inc(1,jj,kk);
+    
+    % apply PEC: set E-fields to zero in PEC region
+    Ex_new = Ex_new.*pec_mask;
+    Ey_new = Ey_new.*pec_mask;
+    Ez_new = Ez_new.*pec_mask;
+
+    
+    % E-field Boundary Conditions
+
+    Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, ...
+        Ex_new, Ex_old,'x');
+    Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, ...
+        Ey_new, Ey_old,'y');
+    Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, ...
+        Ez_new, Ez_old,'z');
+
+    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
+        Ex_new, Ex_old);
+    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
+        Ey_new, Ey_old);
+    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
+        Ez_new, Ez_old);
+
+    % apply PEC: set E-fields to zero in PEC region
+    Ex_new = Ex_new.*pec_mask;
+    Ey_new = Ey_new.*pec_mask;
+    Ez_new = Ez_new.*pec_mask;
+
+    % E-field increment
+%     Ex_old_old = Ex_old;
+%     Ey_old_old = Ey_old;
+%     Ez_old_old = Ez_old;
+
+    Ex_old = Ex_new;
+    Ey_old = Ey_new;
+    Ez_old = Ez_new;
+
+    % H-field calculate
+
+    ii = 1:N_x-1;
+    jj = 1:N_y-1;
+    kk = 1:N_z-1;
       
     Hx_new(ii,jj,kk) = D_a(ii,jj,kk).*Hx_old(ii,jj,kk) ...
         + D_b(ii,jj,kk).*(Ey_old(ii,jj,kk+1)-Ey_old(ii,jj,kk) ...
@@ -437,6 +559,7 @@ while stop_cond == false
         + D_b(ii,jj,kk).*(Ex_old(ii,jj+1,kk)-Ex_old(ii,jj,kk) ...
         + Ey_old(ii,jj,kk) - Ey_old(ii+1,jj,kk));
    
+    %SFTF source insert
     Hz_new(sftf_x,jj,kk) = Hz_new(sftf_x,jj,kk) ...
         + D_b(sftf_x,jj,kk).*Ey_inc(1,jj,kk);
     Hy_new(sftf_x,jj,kk) = Hy_new(sftf_x,jj,kk) ...
@@ -446,93 +569,6 @@ while stop_cond == false
     Hx_old = Hx_new;
     Hy_old = Hy_new;
     Hz_old = Hz_new;
-
-    % E-field calculate
-    ofs = offset;
-    nfs = offset-1;
-    ii = ofs:N_x-nfs;
-    jj = ofs:N_y-nfs;
-    kk = ofs:N_z-nfs;
-
-    if superconducting_model == NONE
-        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
-            + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk));
-    
-        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
-            + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk));
-    
-        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
-            + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk));
-
-    elseif superconducting_model == TWOFLUID      
-        %update E n+1
-        Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
-            + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk)) ...
-            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sx_old(ii,jj,kk);
-    
-        Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
-            + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk)) ...
-            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sy_old(ii,jj,kk);
-    
-        Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
-            + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
-            + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk)) ...
-            + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sz_old(ii,jj,kk);
-           
-        %update J
-       J_sx_new = alp_s*J_sx_old+gam_s*(Ex_new+Ex_old);
-       J_sy_new = alp_s*J_sy_old+gam_s*(Ey_new+Ey_old);
-       J_sz_new = alp_s*J_sz_old+gam_s*(Ez_new+Ez_old);
-
-
-        J_sx_old = J_sx_new.*sc_mask;
-        J_sy_old = J_sy_new.*sc_mask;
-        J_sz_old = J_sz_new.*sc_mask;
-        
-%         J_nx_old = J_nx_new.*sc_mask;
-%         J_ny_old = J_ny_new.*sc_mask;
-%         J_nz_old = J_nz_new.*sc_mask;
-    end
-
-    %SFTF source insert
-    Ey_new(sftf_x,jj,kk) = Ey_new(sftf_x,jj,kk) ...
-        + C_b(sftf_x,jj,kk).*Hz_inc(1,jj,kk);
-    Ez_new(sftf_x,jj,kk) = Ez_new(sftf_x,jj,kk) ...
-        - C_b(sftf_x,jj,kk).*Hy_inc(1,jj,kk);
-    
-    % apply PEC: set E-fields to zero in PEC region
-    Ex_new = Ex_new.*pec_mask;
-    Ey_new = Ey_new.*pec_mask;
-    Ez_new = Ez_new.*pec_mask;
-
-    % E-field Boundary Conditions
-    Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
-        Ex_new, Ex_old, Ex_old_old);
-    Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
-        Ey_new, Ey_old, Ey_old_old);
-    Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, bc_offset, ...
-        Ez_new, Ez_old, Ez_old_old);
-
-    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
-        Ex_new, Ex_old);
-    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
-        Ey_new, Ey_old);
-    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
-        Ez_new, Ez_old);
-
-    % E-field increment
-    Ex_old_old = Ex_old;
-    Ey_old_old = Ey_old;
-    Ez_old_old = Ez_old;
-
-    Ex_old = Ex_new;
-    Ey_old = Ey_new;
-    Ez_old = Ez_new;
 
     %store values to monitors
     for num = 1:num_monitors
@@ -642,39 +678,42 @@ function [ii_,jj_,kk_] = unpack_coords(coord)
     kk_ = coord{3};
 end
 
-function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, offset, W_new, W_old, W_old_old)
+function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, W_new, W_old, field_comp)
 
     [delta_x, delta_y, delta_z] = unpack_coords(deltas);
     [N_x, N_y, N_z] = unpack_coords(Ns);
 
-    ofs = offset;
-    nfs = offset-1;
-
-    ii = ofs+1:N_x-nfs-1;
-    jj = ofs+1:N_y-nfs-1;
-    kk = ofs+1:N_z-nfs-1;
+    ii = 2:N_x-1;
+    jj = 2:N_y-1;
+    kk = 2:N_z-1;
 
     W_new_ = W_new;
 
-    W_new_(ofs,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
-        ofs, N_x, jj, kk, W_new, W_old, W_old_old);
-    W_new_(N_x-nfs,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
-        N_x-nfs, N_x, jj, kk, W_new, W_old, W_old_old);
+%     if field_comp ~= 'x' 
+        W_new_(1,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
+            1, N_x, jj, kk, W_new, W_old);
+        W_new_(N_x,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
+            N_x, N_x, jj, kk, W_new, W_old);
+%     end
 
-    W_new_(ii,ofs,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
-        ofs, N_y, kk, ii, W_new, W_old, W_old_old);
-    W_new_(ii,N_y-nfs,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
-        N_y-nfs, N_y, kk, ii, W_new, W_old, W_old_old);
+%     if field_comp ~= 'y'
+        W_new_(ii,1,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
+            1, N_y, kk, ii, W_new, W_old);
+        W_new_(ii,N_y,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
+            N_y, N_y, kk, ii, W_new, W_old);
+%     end
 
-    W_new_(ii,jj,ofs) = mur_abc_plane('z', c_, delta_t, delta_z, ...
-        ofs, N_z, ii, jj, W_new, W_old, W_old_old);
-    W_new_(ii,jj,N_z-nfs) = mur_abc_plane('z', c_, delta_t, delta_z, ...
-        N_z-nfs, N_z, ii, jj, W_new, W_old, W_old_old);
+%     if field_comp ~= 'z'
+        W_new_(ii,jj,1) = mur_abc_plane('z', c_, delta_t, delta_z, ...
+            1, N_z, ii, jj, W_new, W_old);
+        W_new_(ii,jj,N_z) = mur_abc_plane('z', c_, delta_t, delta_z, ...
+            N_z, N_z, ii, jj, W_new, W_old);
+%     end
 end
 
 
 function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
-    W_new, W_old, W_old_old)
+    W_new, W_old)
     
     i0 = ii;
 
@@ -684,15 +723,9 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         i1 = i0-1;
     end
     
-    iii = {i1, ...
-        i1,i0, ...
-        i0,i1};
-    jjj = {jj, ...
-        jj,jj, ...
-        jj,jj};
-    kkk = {kk, ...
-        kk,kk, ...
-        kk,kk};
+    iii = {i1,i1,i0};
+    jjj = {jj,jj,jj};
+    kkk = {kk,kk,kk};
 
     if boundary == 'x'
         %default
@@ -715,13 +748,11 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
     
     c_ = c(iii{1},jjj{1},kkk{1});
 
-    coeffs_1 = -1;
     coeffs_2 = (c_*delta_t-delta)./(c_*delta_t+delta);
-    coeffs_3 = (2*delta)./(c_*delta_t+delta);
 
-    W_new_ = coeffs_1.* W_old_old(iii{1},jjj{1},kkk{1}) ...
-        +coeffs_2.* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
-        +coeffs_3.* (W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5}));
+    W_new_ = W_old(iii{1},jjj{1},kkk{1}) ...
+        +coeffs_2.*(W_new(iii{2},jjj{2},kkk{2}) ...
+        -W_old(iii{3},jjj{3},kkk{3}));
 end
 
 function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
@@ -730,22 +761,19 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
     [delta_x, ~, ~] = unpack_coords(deltas);
     [N_x, N_y, N_z] = unpack_coords(Ns);
 
-    ofs = offset;
-    nfs = offset-1;
-
-    ii = ofs+1:N_x-nfs-1;
-    jj = ofs+1:N_y-nfs-1;
-    kk = ofs+1:N_z-nfs-1;
+    ii = 1:N_x;
+    jj = 1:N_y;
+    kk = 1:N_z;
     
     W_new_ = W_new;
 
-    i0 = {ofs, N_x-nfs,ii};
-    j0 = {ofs, N_y-nfs,jj};
-    k0 = {ofs, N_z-nfs,kk};
+    i0 = {1, N_x,ii};
+    j0 = {1, N_y,jj};
+    k0 = {1, N_z,kk};
 
-    i1 = {ofs+1, N_x-nfs-1,ii};
-    j1 = {ofs+1, N_y-nfs-1,jj};
-    k1 = {ofs+1, N_z-nfs-1,kk};
+    i1 = {2, N_x-1,ii};
+    j1 = {2, N_y-1,jj};
+    k1 = {2, N_z-1,kk};
     
     
 
@@ -753,30 +781,18 @@ function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
         for jnd = 1:3
             for knd = 1:3
                 if sum([ind==3,jnd==3,knd==3]) == 1
-                    coords_0 = {i0{ind}, j0{jnd}, k0{knd}};
-                    coords_1 = {i1{ind}, j1{jnd}, k1{knd}};
+%                     fprintf('%d %d %d',ind,jnd,knd);
+                    c_ = c(i0{ind}, j0{jnd}, k0{knd});
+        
                     W_new_(i0{ind}, j0{jnd}, k0{knd}) = ...
-                    mur_abc_point(c, delta_t, delta_x, cos_a, coords_0, coords_1,...
-                    W_new, W_old);   
+                        W_old(i1{ind},j1{jnd},k1{knd}) ...
+                        + (c_*delta_t*cos_a-delta_x)./(c_*delta_t*cos_a+delta_x) ...
+                        .*(W_new(i1{ind},j1{jnd},k1{knd}) ...
+                        - W_old(i0{ind},j0{jnd},k0{knd}));
                 end          
             end
         end
     end
-end
-
-
-function W_new_ = mur_abc_point(c, delta_t, delta_x, cos_a, coords_0, coords_1, ...
-    W_new, W_old)
-    
-    [ii_0,jj_0,kk_0] = unpack_coords(coords_0);
-    [ii_1,jj_1,kk_1] = unpack_coords(coords_1);
-
-    c_ = c(ii_0,jj_0,kk_0);
-        
-    W_new_ = W_old(ii_1,jj_1,kk_1) ...
-        + (c_*delta_t*cos_a-delta_x)./(c_*delta_t*cos_a+delta_x) ...
-        .*(W_new(ii_1,jj_1,kk_1) - W_old(ii_0,jj_0,kk_0));
-
 end
 
 function plot_line(field1,index,step,y_text,fig_no,y_max)

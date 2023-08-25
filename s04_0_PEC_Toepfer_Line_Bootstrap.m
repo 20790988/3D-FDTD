@@ -26,7 +26,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     % Superconductivity
         %0 = no superconductivity
         %1 = two-fluid
-        param.sc_model_level = 1;
+        param.sc_model_level = 0;
 
         %lambda in m
         param.lambda_L_0 = 85e-9;
@@ -46,14 +46,14 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     %Grid size and variables
 
-    l_ = 20;
+    l_ = 10;
     w_ = 10;
     
     wSig = 4;
     wGP = 10;
 
     tLine = 0.1;
-    tAirBelow = 1.75;
+    tAirBelow = 0.1;
     hSim = 2.5+tAirBelow;
     tDie = 0.3;
 
@@ -66,7 +66,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 300e-15;
+    param.M_t_max = 400e-15;
 
     % Field capture
     param.field_capture = false;
@@ -93,13 +93,11 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     origin = {0,M_y/2,tAirBelow};
 
-
-
      %GND
      grid = add_cuboid(grid,delta,0,l_, ...
         -wGP/2,wGP/2, ...
         0,tLine, ...
-        SUPERCONDUCTOR, ...
+        PEC, ...
         origin);
     
      %Dielectric
@@ -113,7 +111,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
      grid = add_cuboid(grid,delta,0,l_, ...
         -wSig/2,wSig/2, ...
         tLine+tDie,tLine+tDie+tLine, ...
-        SUPERCONDUCTOR, ...
+        PEC, ...
         origin);
     
 %====================SOURCE PROPERTIES====================%
