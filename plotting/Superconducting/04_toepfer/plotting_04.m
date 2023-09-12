@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_new_BC3.mat";
+result_filename = "monitor_04_new_long.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -17,7 +17,7 @@ result_filename = "monitor_04_new_BC3.mat";
 %Sampling
 
     % max number of samples used
-    N_max = Inf;
+    N_max = 7000;
 
     %upsampling factor for fft. N*k samples used
     k_fft = 1000;
@@ -77,7 +77,8 @@ num_monitors = length(monitor_values);
 for i = 1:1:num_monitors
     Ez = cell2mat(monitor_values{i}(3));
     num_cells = size(Ez,2);
-    voltage_temp = sum(Ez,2);
+    middle = floor(size(Ez,1)/2);
+    voltage_temp = sum(Ez(middle,:,:),2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
     voltage(i,:) = voltage_temp(1:N);
 end
@@ -217,6 +218,7 @@ grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
+ylim([0 1]);
 
 
 figure(8);

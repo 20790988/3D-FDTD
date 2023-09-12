@@ -40,7 +40,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     unit = 1e-6;
 
     % Cell size in units 
-    delta_x = 0.05;
+    delta_x = 0.0333333333;
     delta_y = delta_x;
     delta_z = delta_x;
     

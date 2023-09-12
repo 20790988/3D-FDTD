@@ -46,7 +46,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     %Grid size and variables
 
-    l_ = 20;
+    l_ = 50;
     w_ = 10;
     
     wSig = 4;
@@ -66,7 +66,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     grid_error_tolerance = 1;
 
     % Simulation length in seconds
-    param.M_t_max = 300e-15;
+    param.M_t_max = 800e-15;
 
     % Field capture
     param.field_capture = false;
