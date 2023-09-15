@@ -29,7 +29,7 @@ function [param, grid, source, monitor] = model_waveguide()
     % Superconductivity
         %0 = no superconductivity
         %1 = two-fluid only
-        param.sc_model_level = 1;
+        param.sc_model_level = 0;
 
         %lambda in m
         param.lambda_L = 90e-9;
@@ -84,14 +84,14 @@ function [param, grid, source, monitor] = model_waveguide()
      grid = add_cuboid(grid,delta,0,l_, ...
         -w_/2,w_/2, ...
         0.9,1.1, ...
-        SUPERCONDUCTOR, ...
+        PEC, ...
         origin);
 
     %ground plane
     grid = add_cuboid(grid,delta,0,l_, ...
         -w_/2,w_/2, ...
         0,0.2, ...
-        SUPERCONDUCTOR, ...
+        PEC, ...
         origin);
 
     %dielectric
@@ -155,7 +155,7 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x)
 
     epsilon_0 = 8.8542e-12;
     mu_0 = 1.2566e-6;
-    e_eff = 6.493;
+    e_eff = 1;
     eta = sqrt(mu_0./(epsilon_0*e_eff));
     a = 2e-3/(13*delta_x);
 

@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_new_long.mat";
+result_filename = "monitor.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -78,9 +78,12 @@ for i = 1:1:num_monitors
     Ez = cell2mat(monitor_values{i}(3));
     num_cells = size(Ez,2);
     middle = floor(size(Ez,1)/2);
+    if middle == 0
+        middle = 1;
+    end
     voltage_temp = sum(Ez(middle,:,:),2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
-    voltage(i,:) = voltage_temp(1:N);
+    voltage(i,:) = -voltage_temp(1:N);
 end
 
 
@@ -96,13 +99,16 @@ if reference_index == 0
     reference = monitor.source_from_bootstrap;
     reference = permute(reference,[2 3 1]);
     middle = floor(size(reference,1)/2);
+    if middle == 0
+        middle = 1;
+    end
     reference = reference(middle,:,:);
     num_cells = size(reference,2);
     voltage_temp = sum(reference,2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
     voltage_temp(N) = 0;
 
-    reference = voltage_temp(1:N)';
+    reference = -voltage_temp(1:N)';
 else
     reference = voltage(reference_index,:);
 end

@@ -1,5 +1,5 @@
 function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
-    %v0.1
+    % Superconductor TM line
 
     param = struct('material',0);
 %     source = struct('coord',0);
@@ -10,34 +10,14 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     global floor_tolerance
     floor_tolerance = 1e-9;
     grid_max_error = 0;
-
-%===========================SIMULATION PARAMETERS==============================%
-    % Simulation control
-        %Simulation length [seconds]
-        param.M_t_max = 800e-15;
-
-        param.gpu_accel = true;
-        
-        %Plotting interval [number of timesteps]
-        param.should_plot_output = false;
-        param.plot_interval = 50;
-        
-        %Order of boundary condition (1 or 2)
-        param.mur_bc_order = 2;
-        
-        %Wave velocity for BC
-        param.c_bc = 0;
-%         param.c_bc = 113.03e6;
+%====================SIMULATION PARAMETERS====================%
 
     % Material specification
-        %Conductivity [S/m]
-        sigma = [0 0 0];
-        sigma_m = [0 0 0];
-
-        epsilon_r = [1 4.6 1];
-        mu_r = [1 1 1];
+    sigma = [0 0 0];
+    sigma_m = [0 0 0];    
+    epsilon_r = [1 4.6 1];
+    mu_r = [1 1 1];
     
-    %Material constants for ease of reference
     PEC = 0;
     FREE_SPACE = 1;
     DIELECTRIC = 2;
@@ -48,71 +28,56 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         %1 = two-fluid
         param.sc_model_level = 1;
 
-        %london distance [meter]
-        %   only need to define one, L_0 is adapted according to T_op
+        %lambda in m
         param.lambda_L_0 = 85e-9;
         param.lambda_L = 0;
-        %normal state conductivity [S/m]
+        %sigma in S/m
         param.sigma_n = 6.7e6;
-        %Operating temperature [K]
+        %temps in K
         param.T_op = 4.2;
         param.T_c = 9.25;
     
-    %Simulation space  
-        %[m]
-        unit = 1e-6;
+    unit = 1e-6;
 
-        % Cell size [units] 
-        delta_x = 0.05;
-        delta_y = delta_x;
-        delta_z = delta_x;
+    % Cell size in units 
+    delta_x = 0.05;
+    delta_y = delta_x;
+    delta_z = delta_x;
     
-        %misc. dimension variables
-            l_ = 50;
-            w_ = 10;
-            
-            wSig = 4;
-            wGP = 10;
-        
-            tLine = 0.1;
-            tAirBelow = 1.75;
-            hSim = 2.5+tAirBelow;
-            tDie = 0.3;
+    %Grid size and variables
 
-        %Define size of simulation [units]
-        M_x = l_;
-        M_y = w_;
-        M_z = hSim;
+    l_ = 20;
+    w_ = 10;
+    
+    wSig = 4;
+    wGP = 10;
+
+    tLine = 0.1;
+    tAirBelow = 1.75;
+    hSim = 2.5+tAirBelow;
+    tDie = 0.3;
+
+    M_x = l_;
+    M_y = w_;
+    M_z = hSim;
     
     % Grid alignment behaviour
-        %maximum allowed meshing roundoff error [fraction of cell size]
-        grid_error_tolerance = 0.5;
-        %end program if error exceeds tolerance
-        grid_pause_on_unaligned = true;
+    grid_pause_on_unaligned = true;
+    grid_error_tolerance = 1;
 
-    % Bootstrap source controls
-        param.use_bootstrapped_fields = false;
-        param.bootstrap_field_name = 'none.mat';
-        
-        %Option to trim bootstrap field [s]
-        param.bootstrap_start_time = 19.3e-15;
-        param.bootstrap_end_time = 385e-15;
-        %Lower left corner where source should be inserted [units]
-        bootstrap_origin = [2,0,0];
-    
-    % Field capture controls
-        param.field_capture = true;
-        field_cap_normal_direction = 1;
-        %range to capture [units]
-        field_cap_x = 15;
-        field_cap_y = 0:delta_y:M_y-1*delta_y;
-        field_cap_z = 0:delta_z:M_z-1*delta_z;
-        %selection of components to capture
-        %Ex Ey Ez Hx Hy Hz
-        field_cap_fields = [0,1,1,0,1,1];
+    % Simulation length in seconds
+    param.M_t_max = 300e-15;
 
+    % Field capture
+    param.field_capture = false;
+    field_cap_normal_direction = 1;
+    field_cap_x = 15;
+    field_cap_y = 0:delta_y:M_y-1*delta_y;
+    field_cap_z = 0:delta_z:M_z-1*delta_z;
+    field_cap_fields = [0,1,1,0,1,1];
+%     Ex Ey Ez Hx Hy Hz
     
-%==============================================================================%
+%============================================================%
 
     param.material = [sigma;sigma_m;epsilon_r;mu_r];
     delta = {delta_x,delta_y,delta_z};
@@ -123,13 +88,12 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     grid = ones(N{1},N{2},N{3});
     
-    param.bootstrap_origin = bootstrap_origin.*unit./[delta_x delta_y delta_z];
-
-%================================MODEL SETUP===================================%
-    %background material
+%====================MODEL SETUP====================%
     grid(:,:,:) = FREE_SPACE;
     
     origin = {0,M_y/2,tAirBelow};
+
+
 
      %GND
      grid = add_cuboid(grid,delta,0,l_, ...
@@ -152,11 +116,10 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         SUPERCONDUCTOR, ...
         origin);
     
-%===============================SOURCE PROPERTIES==============================%
-    %duration of source
-%     source.t_max = 0;
-    
-    % Source coordinates [units]
+%====================SOURCE PROPERTIES====================%
+    %if t_max = 0 (default), source will continue as long as simulation
+    source.t_max = 0;
+
     source_x{1} = 2;
     source_y{1} = [-wSig/2, wSig/2];
     source_z{1} = [tLine tLine+tDie];
@@ -165,42 +128,38 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %     source_y{2} = [wGP/2-wSig/2, wGP/2+wSig/2];
 %     source_z{2} = [7 8].*tLine;
 
-    % Adapt source in the case of microstrip
     is_microstrip = true;
+
     d = 0.3;
     w = 4;
     param.e_eff_0 = epsilon_r(2);
     
-%==============================================================================%
 
+%============================================================%
     if is_microstrip
-        param.e_eff_0 = (param.e_eff_0+1)/2 ...
-            +(param.e_eff_0-1)/(2*sqrt(1+12*d/w));
+        param.e_eff_0 = (param.e_eff_0+1)/2+(param.e_eff_0-1)/(2*sqrt(1+12*d/w));
     end
     
     for ind = 1:length(source_x)
         source.coord{ind} = m_to_n(source_x{ind}, ...
             (source_y{ind}(1)):delta_y:(source_y{ind}(2)-1*delta_y), ...
-            (source_z{ind}(1)):delta_z:(source_z{ind}(2)-1*delta_z), ...
-            delta, origin);
+            (source_z{ind}(1)):delta_z:(source_z{ind}(2)-1*delta_z), delta, origin);
     end
-    
-    %field capture setup
-    if param.field_capture 
-        str = sprintf('field_capture');
+
+%====================MONITOR SETUP====================%
+    str = sprintf('field_capture');
         bootstrap(1).name = str;
 
+    if param.field_capture 
         bootstrap(1).coords = m_to_n(field_cap_x, field_cap_y, field_cap_z, ...
             delta, {0,0,0});
         bootstrap(1).normal_direction = field_cap_normal_direction;
         bootstrap(1).fields_to_monitor = field_cap_fields;
     end
 
-%===============================MONITOR SETUP==================================%
-
     N_temp = l_-1; %#ok<*UNRCH> 
     
-    monitor_y = [0,0+delta_y];
+    monitor_y = [-wSig/2, wSig/2];
     monitor_z = [tLine tLine+tDie];
 
     for ii = 1:N_temp
@@ -213,17 +172,23 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
     end
     
-%==============================================================================%
 
+   
+%==================================================%
     if sum(grid==SUPERCONDUCTOR,'all') > 0 && param.sc_model_level == 0
-        fprintf('WARNING: Model contains superconductor but model level == 0\n');
+        fprintf('Model contains superconductor but model level == 0\n');
+        param = 0;
+        grid = 0;
+        source = 0;
+        fprintf('Model setup unsucsessful\n');
     end
 
    if sum(grid==SUPERCONDUCTOR,'all') == 0 && param.sc_model_level > 0
-        fprintf('WARNING: Supeconducting model ~= 0 but no superconductor in model\n');
+        fprintf('Supeconducting model ~= 0 but no superconductor in model\n');
         fprintf('This will increase runtime\n');
     end
     
+
     if grid_max_error < grid_error_tolerance
         fprintf('Model setup sucsessful\n');  
         fprintf('Max gridding error:%.3e of cell\n',grid_max_error);
@@ -238,9 +203,8 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     end
 end
 
-%=================================SOURCE SIGNAL================================%
-function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x, ...
-    e_eff_0,source_index)
+%====================SOURCE SIGNAL====================%
+function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x,e_eff_0,source_index)
     
     EXP = 1;
     GAUSDERV = 2;
@@ -250,7 +214,8 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x, ...
     t0 = 20e-15;
     T = 5e-15;
     
-%==============================================================================%
+
+    %========================================%
 
     epsilon_0 = 8.8542e-12;
     mu_0 = 1.2566e-6;
@@ -282,9 +247,7 @@ function pulse = gaus_derv(t,mu,sigma)
     pulse =  pulse./max(pulse,[],'all');
 end
 
-%============================CONSTRUCTION FUNCTIONS============================%
-function grid = routeblock(grid,delta,material_cond,material_die, ...
-    global_origin,desired_placement)
+function grid = routeblock(grid,delta,material_cond,material_die,global_origin,desired_placement)
     
     origin = sumcell(global_origin,desired_placement);
     %local origin is in left bottom corner
@@ -453,8 +416,7 @@ function grid = routeblock(grid,delta,material_cond,material_die, ...
     end
 end
 
-function grid = viablock(grid,delta,material_cond,material_die, ...
-    global_origin,desired_placement)
+function grid = viablock(grid,delta,material_cond,material_die,global_origin,desired_placement)
     
     origin = sumcell(global_origin,desired_placement);
     %local origin is in left bottom corner
@@ -551,8 +513,7 @@ function grid = viablock(grid,delta,material_cond,material_die, ...
     end
 end
 
-function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax, ...
-    material,relative_to)
+function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax,material,relative_to)
     
     if xmin>xmax
         [xmin,xmax] = swop(xmin,xmax);
@@ -573,10 +534,12 @@ function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax, ...
 
 end
 
-%==============================================================================%
+
+
 
 function point = m_to_n(x,y,z,delta,relative_to)
-   
+    
+
     ii = (x+relative_to{1})/delta{1}+1;
     jj = (y+relative_to{2})/delta{2}+1;
     kk = (z+relative_to{3})/delta{3}+1;
@@ -616,3 +579,4 @@ function result = sumcell(a,b)
         result{i} = a{i}+b{i};
     end
 end
+

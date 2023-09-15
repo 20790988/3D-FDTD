@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_improve2";
+result_filename = "monitor_broad.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -27,7 +27,7 @@ result_filename = "monitor_improve2";
     N_zero = 0;
 
 %Indices
-    port_index = [1,5];
+    port_index = [1,17];
 
     number_of_ports = length(port_index);
 
@@ -76,17 +76,16 @@ num_monitors = length(monitor_values);
 
 for i = 1:1:num_monitors
     Ez = cell2mat(monitor_values{i}(3));
-    num_cells = size(Ez,2);
-    middle = floor(size(Ez,1)/2);
-    voltage_temp = sum(Ez(middle,:,:),2);
-    voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
+%     num_cells = size(Ez,2);
+    voltage_temp = sum(Ez,[1 2]);
+    voltage_temp = squeeze(voltage_temp);
     voltage(i,:) = voltage_temp(1:N);
 end
 
 
 t = (0:N-1)*delta_t;
 figure(1)
-plot(t./1e-12,voltage(17,:));
+plot(t./1e-12,voltage(15,:));
 grid on
 xlabel('Time (ps)')
 ylabel('Voltage')

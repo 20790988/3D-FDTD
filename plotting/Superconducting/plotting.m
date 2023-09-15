@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04.mat";
+result_filename = "monitor.mat";
 
 %Line properties
     %distance between plates and width of line in meters

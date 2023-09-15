@@ -54,7 +54,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         param.lambda_L = 0;
         %normal state conductivity [S/m]
         param.sigma_n = 6.7e6;
-        %Operating temperature [K]
+        %Operating temperatureK
         param.T_op = 4.2;
         param.T_c = 9.25;
     
@@ -63,21 +63,21 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         unit = 1e-6;
 
         % Cell size [units] 
-        delta_x = 0.05;
+        delta_x = 0.0333333333;
         delta_y = delta_x;
         delta_z = delta_x;
     
         %misc. dimension variables
-            l_ = 50;
-            w_ = 10;
-            
-            wSig = 4;
-            wGP = 10;
+        l_ = 50;
+        w_ = 10;
         
-            tLine = 0.1;
-            tAirBelow = 1.75;
-            hSim = 2.5+tAirBelow;
-            tDie = 0.3;
+        wSig = 4;
+        wGP = 10;
+    
+        tLine = 0.1;
+        tAirBelow = 1.75;
+        hSim = 2.5+tAirBelow;
+        tDie = 0.3;
 
         %Define size of simulation [units]
         M_x = l_;
@@ -86,13 +86,13 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     % Grid alignment behaviour
         %maximum allowed meshing roundoff error [fraction of cell size]
-        grid_error_tolerance = 0.5;
+        grid_error_tolerance = 1;
         %end program if error exceeds tolerance
         grid_pause_on_unaligned = true;
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = false;
-        param.bootstrap_field_name = 'none.mat';
+        param.bootstrap_field_name = 'field_cap_toepfer_new.mat';
         
         %Option to trim bootstrap field [s]
         param.bootstrap_start_time = 19.3e-15;

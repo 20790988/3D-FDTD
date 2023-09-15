@@ -9,77 +9,80 @@ clearvars
 fprintf('Start\n')
 main_timer = tic;
 
+global bc_parameter
 
-%====================SIMULATION SETTINGS=====================%        
-    [param, material, source, monitor, bootstrap_monitor] = s04_Toepfer_Line;
-
-    gpu_accel = true;
-    should_plot_output = false;
-    plot_interval = 50;
-
-    mur_bc_order = 1;
-
-    use_bootstrapped_fields = false;
-    bootstrap_field_name = 'field_cap_toepfer_ABC.mat';
+%============================SIMULATION FILENAME===============================%
+[param, material, source, monitor, bootstrap_monitor] = ...
+    s04_0_Toepfer_Line_Bootstrap;
+%====================================\*/=======================================%
 
 
-    bootstrap_start_index = 300;
-    bootstrap_end_index = 6000;
-    bootstrap_origin = [40,0,0];
+%=====================================SETUP====================================%
+gpu_accel = param.gpu_accel;
+should_plot_output = param.should_plot_output;
+plot_interval = param.plot_interval;
 
-% Space around E-field in grid cells
+mur_bc_order = param.mur_bc_order;
+
+bc_parameter = param.c_bc;
+
+use_bootstrapped_fields = param.use_bootstrapped_fields;
+bootstrap_field_name = param.bootstrap_field_name;
+
+% Tiny hardcoded sins %
+    % Space around E-field in grid cells
     offset = 3;
     bc_offset = 2;
 
-% corner angle
+    % corner angle for BC
     cos_a = cos(pi/4);
-    
-%====================MODEL IMPORT=====================%    
-    sigma = param.material(1,:);
-    sigma_m = param.material(2,:);
-    
+
     epsilon_0 = 8.8542e-12;
-    epsilon_r = param.material(3,:);
-    epsilon = epsilon_0*epsilon_r;
-    
     mu_0 = 1.2566e-6;
-    mu_r = param.material(4,:);
-    mu = mu_0*mu_r;
-    
-    superconducting_model = param.sc_model_level;
-    NONE = 0;
-    TWOFLUID = 1;
+%=====================%
+  
+sigma = param.material(1,:);
+sigma_m = param.material(2,:);
 
-    lambda_L = param.lambda_L;
-    lambda_L_0 = param.lambda_L_0;
-    sigma_n = param.sigma_n;
-    T_op = param.T_op;
-    T_c = param.T_c;
+epsilon_r = param.material(3,:);
+epsilon = epsilon_0*epsilon_r;
 
-    N = param.N;
+mu_r = param.material(4,:);
+mu = mu_0*mu_r;
 
-    N_x = N{1};
-    N_y = N{2};
-    N_z = N{3};
-    
-    delta = param.delta;
-    delta_x = delta{1};
-    delta_y = delta{2};
-    delta_z = delta{3};
-    
-    c = 1./sqrt(epsilon.*mu);
-    delta_t = delta_x/(max(c)*sqrt(3));
-    
-% Simulation length
-    N_t_max = floor(param.M_t_max/delta_t);
-    
-%     if use_bootstrapped_fields
-%         N_t_max = bootstrap_end_index-bootstrap_start_index;
-%     end
+superconducting_model = param.sc_model_level;
+NONE = 0;
+TWOFLUID = 1;
 
+lambda_L = param.lambda_L;
+lambda_L_0 = param.lambda_L_0;
+sigma_n = param.sigma_n;
+T_op = param.T_op;
+T_c = param.T_c;
+
+N = param.N;
+
+N_x = N{1};
+N_y = N{2};
+N_z = N{3};
+
+delta = param.delta;
+delta_x = delta{1};
+delta_y = delta{2};
+delta_z = delta{3};
+
+%Stable propagation in fastest material
+c = 1./sqrt(epsilon.*mu);
+delta_t = delta_x/(max(c)*sqrt(3));
+    
+N_t_max = floor(param.M_t_max/delta_t);
+
+bootstrap_start_index = param.bootstrap_start_time/delta_t;
+bootstrap_end_index = param.bootstrap_end_time/delta_t;
+bootstrap_origin = param.bootstrap_origin;
+    
 % Fix sigma
 %     sigma = sqrt(sigma./(2*pi*10e9*mu))./delta_x;
-
 
 % Source plane
     source_coords = source.coord;
@@ -90,14 +93,13 @@ main_timer = tic;
         source_z{ind} = source_coords{ind}{3};
     end
 
-source_N_t_max = floor(source.t_max/delta_t);
-
-%====================SIMULATION SETUP AND INITIALISE=====================%   
+% source_N_t_max = floor(source.t_max/delta_t);
 
 t = (0:N_t_max)*delta_t;
 
-for ind = 1:length(source_coords);
-    [source_val_E{ind},source_val_H{ind}] = source.value{3}(t,delta_t,delta_x,param.e_eff_0,ind);
+for ind = 1:length(source_coords)
+    [source_val_E{ind},source_val_H{ind}] = ...
+        source.value{3}(t,delta_t,delta_x,param.e_eff_0,ind);
 end
 
 % load bootstrap fields
@@ -116,14 +118,6 @@ if use_bootstrapped_fields
     fprintf('Loaded successfully\n')
 end
 
-% check stability
-S = max(c)*delta_t/delta_x;
-
-if S>1
-    fprintf('Simulation unstable');
-    return
-end
-
 %superconducting constants
 if lambda_L == 0
     lambda_L = lambda_L_0/(sqrt(1-(T_op/T_c)^4));
@@ -132,7 +126,7 @@ end
 alp_s = 1;
 gam_s = delta_t/(2*mu_0*lambda_L^2);
 
-sigma(3) = sigma_n*(T_op/T_c)^4;
+sigma(3) = sigma_n*((T_op/T_c)^4);
 
 %FDTD parameters
 if superconducting_model == NONE
@@ -153,8 +147,6 @@ elseif superconducting_model == TWOFLUID
     C_c_single = -1./(epsilon/delta_t + half_sum_gam + sigma/2);
 
     C_c_single(1:2) = 0;
-    
-    
 end
 
 D_a_single = (1-(sigma_m.*delta_t)./(2.*mu))./(1+(sigma_m.*delta_t)./(2.*mu));
@@ -165,7 +157,7 @@ material(material==0) = 1;
 
 sc_mask = (material == 3);
 
-% Don't update supercurrent inside boundary - redundant
+% Don't update supercurrent inside boundary
 sc_mask([1,N_x],:,:) = 0;
 sc_mask(:,[1,N_y],:) = 0;
 sc_mask(:,:,[1,N_z]) = 0;
@@ -174,10 +166,9 @@ sc_mask(:,:,[1,N_z]) = 0;
 C_a = C_a_single(material);
 C_b = C_b_single(material);
 
-if superconducting_model~=0
+if superconducting_model==TWOFLUID
     C_c = C_c_single(material);
 end
-
 
 D_a = D_a_single(material);
 D_b = D_b_single(material);
@@ -185,9 +176,9 @@ D_b = D_b_single(material);
 c_ = c(material);
 
 % matrix declaration
-% Ex_old_old = zeros(N_x,N_y,N_z);
-% Ey_old_old = zeros(N_x,N_y,N_z);
-% Ez_old_old = zeros(N_x,N_y,N_z);
+Ex_old_old = zeros(N_x,N_y,N_z);
+Ey_old_old = zeros(N_x,N_y,N_z);
+Ez_old_old = zeros(N_x,N_y,N_z);
 
 Ex_old = zeros(N_x,N_y,N_z);
 Ex_new = zeros(N_x,N_y,N_z);
@@ -296,7 +287,7 @@ if gpu_accel
     C_a = gpuArray(C_a);
     C_b = gpuArray(C_b);
     
-    if superconducting_model ~= 0
+    if superconducting_model == TWOFLUID
         C_c = gpuArray(C_c);
     end
 
@@ -305,9 +296,9 @@ if gpu_accel
     
     c_ = gpuArray(c_);
     
-%     Ex_old_old = gpuArray(Ex_old_old);
-%     Ey_old_old = gpuArray(Ey_old_old);
-%     Ez_old_old = gpuArray(Ez_old_old);
+    Ex_old_old = gpuArray(Ex_old_old);
+    Ey_old_old = gpuArray(Ey_old_old);
+    Ez_old_old = gpuArray(Ez_old_old);
     
     Ex_old = gpuArray(Ex_old);
     Ex_new = gpuArray(Ex_new);
@@ -345,12 +336,10 @@ if gpu_accel
     % J_nz_old = gpuArray();
 end
 
-%====================LOOP START=====================%
+%================================LOOP START====================================%
 
 while stop_cond == false
     text_update(step,N_t_max,delta_t)
-    
-    %find source field distributions
 
     if use_bootstrapped_fields
         if step+bootstrap_start_index <= bootstrap_end_index
@@ -411,36 +400,46 @@ while stop_cond == false
         tempx = floor(N_x/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,1,1,1,step,delta,delta_t,1);
+        plot_field(E_tot,tempx,tempy,tempz,step,delta,delta_t,1);
 %           view([0 0 1])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
         temp = 0;
+
+%         temp_field = sqrt((E_tot(200,:,:)-E_tot(199,:,:)).^2);
+%         h = surf(squeeze(temp_field));
+%         set(h,'edgecolor','none')
+%         view([0 0 1])
+%         colormap jet
+%         bar = colorbar();
+%         clim([0 0.1])
+
+
     end
     %====================PLOTTING END=====================%
 
     % E-field calculate
     if superconducting_model == NONE
-        ii = 1:N_x-1;
-        jj = 2:N_y;
-        kk = 2:N_z;
+        ii = 2:N_x-1;
+        jj = 2:N_y-1;
+        kk = 2:N_z-1;
 
         Ex_new(ii,jj,kk) = C_a(ii,jj,kk).*Ex_old(ii,jj,kk) ...
             + C_b(ii,jj,kk).*(Hz_old(ii,jj,kk)-Hz_old(ii,jj-1,kk) ...
             + Hy_old(ii,jj,kk-1) - Hy_old(ii,jj,kk));
     
-        ii = 2:N_x;
-        jj = 1:N_y-1;
-        kk = 2:N_z;
+        ii = 2:N_x-1;
+        jj = 2:N_y-1;
+        kk = 2:N_z-1;
             
         Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
             + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
             + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk));
         
-        ii = 2:N_x;
-        jj = 2:N_y;
-        kk = 1:N_z-1;
+        ii = 2:N_x-1;
+        jj = 2:N_y-1;
+        kk = 2:N_z-1;
 
         Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
             + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
@@ -460,28 +459,20 @@ while stop_cond == false
         J_sx_new(ii,jj,kk) = alp_s*J_sx_old(ii,jj,kk) ...
             +gam_s*(Ex_new(ii,jj,kk)+Ex_old(ii,jj,kk));
 
-%         ii = 2:N_x;
-%         jj = 1:N_y-1;
-%         kk = 2:N_z;
-
         Ey_new(ii,jj,kk) = C_a(ii,jj,kk).*Ey_old(ii,jj,kk) ...
             + C_b(ii,jj,kk).*(Hx_old(ii,jj,kk)-Hx_old(ii,jj,kk-1) ...
             + Hz_old(ii-1,jj,kk) - Hz_old(ii,jj,kk)) ...
             + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sy_old(ii,jj,kk);
 
-       J_sy_new(ii,jj,kk) = alp_s*J_sy_old(ii,jj,kk) ...
+        J_sy_new(ii,jj,kk) = alp_s*J_sy_old(ii,jj,kk) ...
             +gam_s*(Ey_new(ii,jj,kk)+Ey_old(ii,jj,kk));
-    
-%         ii = 2:N_x;
-%         jj = 2:N_y;
-%         kk = 1:N_z-1;
 
         Ez_new(ii,jj,kk) = C_a(ii,jj,kk).*Ez_old(ii,jj,kk) ...
             + C_b(ii,jj,kk).*(Hy_old(ii,jj,kk)-Hy_old(ii-1,jj,kk) ...
             + Hx_old(ii,jj-1,kk) - Hx_old(ii,jj,kk)) ...
             + C_c(ii,jj,kk).*0.5.*(alp_s+1).*J_sz_old(ii,jj,kk);   
 
-       J_sz_new(ii,jj,kk) = alp_s*J_sz_old(ii,jj,kk) ...
+        J_sz_new(ii,jj,kk) = alp_s*J_sz_old(ii,jj,kk) ...
            +gam_s*(Ez_new(ii,jj,kk)+Ez_old(ii,jj,kk));
 
 
@@ -495,13 +486,10 @@ while stop_cond == false
     end
 
     %SFTF source insert
-%     jj = 1:N_y-1;
-%     kk = 2:N_z;
+
     Ey_new(sftf_x,jj,kk) = Ey_new(sftf_x,jj,kk) ...
         + C_b(sftf_x,jj,kk).*Hz_inc(1,jj,kk);
 
-%     jj = 2:N_y;
-%     kk = 1:N_z-1;
     Ez_new(sftf_x,jj,kk) = Ez_new(sftf_x,jj,kk) ...
         - C_b(sftf_x,jj,kk).*Hy_inc(1,jj,kk);
     
@@ -514,17 +502,17 @@ while stop_cond == false
     % E-field Boundary Conditions
 
     Ex_new = assist_mur_abc_plane(c_, delta_t, delta, N, ...
-        Ex_new, Ex_old,'x');
+        Ex_new, Ex_old,Ex_old_old,mur_bc_order);
     Ey_new = assist_mur_abc_plane(c_, delta_t, delta, N, ...
-        Ey_new, Ey_old,'y');
+        Ey_new, Ey_old,Ey_old_old,mur_bc_order);
     Ez_new = assist_mur_abc_plane(c_, delta_t, delta, N, ...
-        Ez_new, Ez_old,'z');
+        Ez_new, Ez_old,Ez_old_old,mur_bc_order);
 
-    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
+    Ex_new = assist_mur_abc_line(c_, delta_t, delta, N, cos_a, ...
         Ex_new, Ex_old);
-    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
+    Ey_new = assist_mur_abc_line(c_, delta_t, delta, N, cos_a, ...
         Ey_new, Ey_old);
-    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, bc_offset, cos_a, ...
+    Ez_new = assist_mur_abc_line(c_, delta_t, delta, N, cos_a, ...
         Ez_new, Ez_old);
 
     % apply PEC: set E-fields to zero in PEC region
@@ -533,9 +521,9 @@ while stop_cond == false
     Ez_new = Ez_new.*pec_mask;
 
     % E-field increment
-%     Ex_old_old = Ex_old;
-%     Ey_old_old = Ey_old;
-%     Ez_old_old = Ez_old;
+    Ex_old_old = Ex_old;
+    Ey_old_old = Ey_old;
+    Ez_old_old = Ez_old;
 
     Ex_old = Ex_new;
     Ey_old = Ey_new;
@@ -678,7 +666,7 @@ function [ii_,jj_,kk_] = unpack_coords(coord)
     kk_ = coord{3};
 end
 
-function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, W_new, W_old, field_comp)
+function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, W_new, W_old, W_old_old, mur_bc_order)
 
     [delta_x, delta_y, delta_z] = unpack_coords(deltas);
     [N_x, N_y, N_z] = unpack_coords(Ns);
@@ -689,32 +677,27 @@ function W_new_ = assist_mur_abc_plane(c_, delta_t, deltas, Ns, W_new, W_old, fi
 
     W_new_ = W_new;
 
-%     if field_comp ~= 'x' 
         W_new_(1,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
-            1, N_x, jj, kk, W_new, W_old);
+            1, N_x, jj, kk, W_new, W_old,W_old_old,mur_bc_order);
         W_new_(N_x,jj,kk) = mur_abc_plane('x', c_, delta_t, delta_x, ...
-            N_x, N_x, jj, kk, W_new, W_old);
-%     end
+            N_x, N_x, jj, kk, W_new, W_old,W_old_old,mur_bc_order);
 
-%     if field_comp ~= 'y'
         W_new_(ii,1,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
-            1, N_y, kk, ii, W_new, W_old);
+            1, N_y, kk, ii, W_new, W_old,W_old_old,mur_bc_order);
         W_new_(ii,N_y,kk) = mur_abc_plane('y', c_, delta_t, delta_y, ...
-            N_y, N_y, kk, ii, W_new, W_old);
-%     end
+            N_y, N_y, kk, ii, W_new, W_old,W_old_old,mur_bc_order);
 
-%     if field_comp ~= 'z'
         W_new_(ii,jj,1) = mur_abc_plane('z', c_, delta_t, delta_z, ...
-            1, N_z, ii, jj, W_new, W_old);
+            1, N_z, ii, jj, W_new, W_old,W_old_old,mur_bc_order);
         W_new_(ii,jj,N_z) = mur_abc_plane('z', c_, delta_t, delta_z, ...
-            N_z, N_z, ii, jj, W_new, W_old);
-%     end
+            N_z, N_z, ii, jj, W_new, W_old,W_old_old,mur_bc_order);
 end
 
 
 function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
-    W_new, W_old)
+    W_new, W_old,W_old_old,mur_bc_order)
     
+    global bc_parameter
     i0 = ii;
 
     if ii < N/2
@@ -723,39 +706,88 @@ function W_new_ = mur_abc_plane(boundary, c, delta_t, delta, ii, N, jj, kk, ...
         i1 = i0-1;
     end
     
-    iii = {i1,i1,i0};
-    jjj = {jj,jj,jj};
-    kkk = {kk,kk,kk};
-
-    if boundary == 'x'
-        %default
-        
-    elseif boundary == 'y'
-        tempi = iii;
-        tempj = jjj;
-        tempk = kkk;
-        iii = tempk;
-        jjj = tempi;
-        kkk = tempj;
-    elseif boundary == 'z'
-        tempi = iii;
-        tempj = jjj;
-        tempk = kkk;
-        iii = tempj;
-        jjj = tempk;
-        kkk = tempi;
-    end
+    if mur_bc_order == 1
     
-    c_ = c(iii{1},jjj{1},kkk{1});
+        iii = {i1,i1,i0};
+        jjj = {jj,jj,jj};
+        kkk = {kk,kk,kk};
+    
+        if boundary == 'x'
+            %default
+            
+        elseif boundary == 'y'
+            tempi = iii;
+            tempj = jjj;
+            tempk = kkk;
+            iii = tempk;
+            jjj = tempi;
+            kkk = tempj;
+        elseif boundary == 'z'
+            tempi = iii;
+            tempj = jjj;
+            tempk = kkk;
+            iii = tempj;
+            jjj = tempk;
+            kkk = tempi;
+        end
+        
+        c_ = c(iii{1},jjj{1},kkk{1});
+    
+        coeffs_2 = (c_*delta_t-delta)./(c_*delta_t+delta);
+    
+        W_new_ = W_old(iii{1},jjj{1},kkk{1}) ...
+            +coeffs_2.*(W_new(iii{2},jjj{2},kkk{2}) ...
+            -W_old(iii{3},jjj{3},kkk{3}));
 
-    coeffs_2 = (c_*delta_t-delta)./(c_*delta_t+delta);
+    elseif mur_bc_order ==2
 
-    W_new_ = W_old(iii{1},jjj{1},kkk{1}) ...
-        +coeffs_2.*(W_new(iii{2},jjj{2},kkk{2}) ...
-        -W_old(iii{3},jjj{3},kkk{3}));
+%         iii = {i1,i0,i1,i1,i0};
+        iii = {i1,i1,i0,i0,i1};
+        jjj = {jj,jj,jj,jj,jj};
+        kkk = {kk,kk,kk,kk,kk};
+    
+        if boundary == 'x'
+            %default
+            
+        elseif boundary == 'y'
+            tempi = iii;
+            tempj = jjj;
+            tempk = kkk;
+            iii = tempk;
+            jjj = tempi;
+            kkk = tempj;
+        elseif boundary == 'z'
+            tempi = iii;
+            tempj = jjj;
+            tempk = kkk;
+            iii = tempj;
+            jjj = tempk;
+            kkk = tempi;
+        end
+        
+        if bc_parameter == 0
+            c_ = c(iii{1},jjj{1},kkk{1});
+        else
+            c_ = bc_parameter;
+        end   
+
+    
+%         coeffs_1 = (4*c_*delta_t)./(-delta);
+%     
+% %         W_new_ = coeffs_1.*(W_old(iii{1},jjj{1},kkk{1})-W_old(iii{2},jjj{2},kkk{2})) ...
+% %             - (W_new(iii{3},jjj{3},kkk{3}) ...
+% %             -W_old_old(iii{4},jjj{4},kkk{4}) -W_old_old(iii{5},jjj{5},kkk{5}));
+        
+        coeffs_2 = (c_.*delta_t-delta)./(c_.*delta_t+delta);
+        coeffs_3 = (2*delta)./(c_.*delta_t+delta);
+
+        W_new_ = -W_old_old(iii{1},jjj{1},kkk{1}) + coeffs_2.* (W_new(iii{2},jjj{2},kkk{2})+W_old_old(iii{3},jjj{3},kkk{3})) ...
+            + coeffs_3.*(W_old(iii{4},jjj{4},kkk{4})+W_old(iii{5},jjj{5},kkk{5}));
+    end
+
 end
 
-function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, offset, cos_a, ...
+function W_new_ = assist_mur_abc_line(c, delta_t, deltas, Ns, cos_a, ...
     W_new, W_old)
 
     [delta_x, ~, ~] = unpack_coords(deltas);
