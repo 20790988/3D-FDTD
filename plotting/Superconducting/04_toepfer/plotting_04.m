@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor.mat";
+result_filename = "monitor_04_2.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -27,7 +27,7 @@ result_filename = "monitor.mat";
     N_zero = 0;
 
 %Indices
-    port_index = [1,17];
+    port_index = [1,27];
 
     number_of_ports = length(port_index);
 
@@ -41,7 +41,7 @@ result_filename = "monitor.mat";
 
 
 % Theoretical values
-    line_length = 15e-6;
+    line_length = 25e-6;
 
 %=========================================%
 
@@ -212,7 +212,8 @@ legend('FDTD s11','InductEx S11');
 ylim([-70 0])
 
 figure(7);
-c = 3e8;
+% c = 3e8;
+c=1;
 hold on
 plot(x,-2*pi.*f.*line_length./angle(sn1(2,:))./c,'b--',LineWidth=2);
 plot(x,-2*pi.*f.*line_length./angle(s21_th)./c,'b-.',LineWidth=2);
@@ -224,7 +225,7 @@ grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
-ylim([0 1]);
+% ylim([0 1]);
 
 
 figure(8);

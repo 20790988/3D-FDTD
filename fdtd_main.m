@@ -13,7 +13,7 @@ global bc_parameter
 
 %============================SIMULATION FILENAME===============================%
 [param, material, source, monitor, bootstrap_monitor] = ...
-    s04_0_Toepfer_Line_Bootstrap;
+    s04_Toepfer_Line();
 %====================================\*/=======================================%
 
 
@@ -77,8 +77,8 @@ delta_t = delta_x/(max(c)*sqrt(3));
     
 N_t_max = floor(param.M_t_max/delta_t);
 
-bootstrap_start_index = param.bootstrap_start_time/delta_t;
-bootstrap_end_index = param.bootstrap_end_time/delta_t;
+bootstrap_start_index = floor(param.bootstrap_start_time/delta_t);
+bootstrap_end_index = floor(param.bootstrap_end_time/delta_t);
 bootstrap_origin = param.bootstrap_origin;
     
 % Fix sigma
@@ -395,13 +395,13 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(8);
-        tempy = floor(N_y/2);
+        tempz = floor(40);
+        tempy = floor(N_y/4);
         tempx = floor(N_x/2);
 
         E_tot = sqrt(Ex_old.^2+Ey_old.^2+Ez_old.^2);
-        plot_field(E_tot,tempx,tempy,tempz,step,delta,delta_t,1);
-%           view([0 0 1])
+        plot_field(E_tot,[],tempy,tempz,step,delta,delta_t,1);
+%         view([0 0 1])
 
         E_tot_line = (E_tot(:,tempy,tempz));
         plot_line(E_tot_line,delta_x*(0:N_x-1),step,'|E_{tot}| (V/m)',2);
