@@ -14,7 +14,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %===========================SIMULATION PARAMETERS==============================%
     % Simulation control
         %Simulation length [seconds]
-        param.M_t_max = 1200e-15;
+        param.M_t_max = 800e-12;
 
         param.gpu_accel = true;
         
@@ -26,15 +26,15 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         param.mur_bc_order = 2;
         
         %Wave velocity for BC
-%         param.c_bc = 0;
-        param.c_bc = 110.53e6;
+        param.c_bc = 0;
+%         param.c_bc = 113.03e6;
 
     % Material specification
         %Conductivity [S/m]
         sigma = [0 0 0];
         sigma_m = [0 0 0];
 
-        epsilon_r = [1 4.6 1];
+        epsilon_r = [1 9.6 1];
         mu_r = [1 1 1];
     
     %Material constants for ease of reference
@@ -46,7 +46,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     % Superconductivity
         %0 = no superconductivity
         %1 = two-fluid
-        param.sc_model_level = 1;
+        param.sc_model_level = 0;
 
         %london distance [meter]
         %   only need to define one, L_0 is adapted according to T_op
@@ -60,24 +60,23 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     %Simulation space  
         %[m]
-        unit = 1e-6;
+        unit = 1e-3;
 
         % Cell size [units] 
-        delta_x = 0.05;
+        delta_x = 0.06;
         delta_y = delta_x;
         delta_z = delta_x;
     
         %misc. dimension variables
-            l_ = 20;
-            w_ = 30;
+            l_ = 40;
+            w_ = 14.4;
             
-            wSig = 4;
-            wGP = 10;
-        
-            tLine = 0.1;
-            tAirBelow = 1.75;
-            hSim = 2.5+tAirBelow;
-            tDie = 0.3;
+            wSig = 0.6;
+                    
+            tLine = 2*delta_z;
+            tGP = 4*delta_z;
+            h = 0.6;
+            hSim = 7.4;
 
         %Define size of simulation [units]
         M_x = l_;
@@ -86,19 +85,19 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     % Grid alignment behaviour
         %maximum allowed meshing roundoff error [fraction of cell size]
-        grid_error_tolerance = 0.5;
+        grid_error_tolerance = 0.7;
         %end program if error exceeds tolerance
         grid_pause_on_unaligned = true;
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = true;
-        param.bootstrap_field_name = 'field_cap_toepfer_4_0.3.mat';
+        param.bootstrap_field_name = 'field_cap_zmei_0.6_0.6.mat';
         
         %Option to trim bootstrap field [s]
-        param.bootstrap_start_time = 40e-15;
-        param.bootstrap_end_time = 633e-15;
-        %Lower left corner where source should be inserted [cells]
-        bootstrap_origin = [40,200,0];
+        param.bootstrap_start_time = 50e-12;
+        param.bootstrap_end_time = 420e-12;
+        %Lower left corner where source should be inserted [units]
+        bootstrap_origin = [2,0,0];
     
     % Field capture controls
         param.field_capture = false;
@@ -123,39 +122,33 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     grid = ones(N{1},N{2},N{3});
     
-    param.bootstrap_origin = bootstrap_origin;
+    param.bootstrap_origin = bootstrap_origin.*unit./[delta_x delta_y delta_z];
 
 %================================MODEL SETUP===================================%
+    %background material
     grid(:,:,:) = FREE_SPACE;
     
-    origin = {0,0,tAirBelow};
+    origin = {0,M_y/2,tGP};
 
      %GND
      grid = add_cuboid(grid,delta,0,l_, ...
-        0,w_, ...
-        0,tLine, ...
-        SUPERCONDUCTOR, ...
+        -w_/2,w_/2, ...
+        -tGP,0, ...
+        PEC, ...
         origin);
     
      %Dielectric
      grid = add_cuboid(grid,delta,0,l_, ...
-        0,w_, ...
-        tLine,tLine+tDie, ...
+        -w_/2,w_/2, ...
+        0,h, ...
         DIELECTRIC, ...
         origin);
 
-     %Sig1
-     grid = add_cuboid(grid,delta,0,17, ...
-        15-wSig/2,15+wSig/2, ...
-        tLine+tDie,tLine+tDie+tLine, ...
-        SUPERCONDUCTOR, ...
-        origin);
-
-     %Sig2
-     grid = add_cuboid(grid,delta,13,17, ...
-        0,w_, ...
-        tLine+tDie,tLine+tDie+tLine, ...
-        SUPERCONDUCTOR, ...
+     %Sig
+     grid = add_cuboid(grid,delta,0,l_, ...
+        -wSig/2,wSig/2, ...
+        h,h+tLine, ...
+        PEC, ...
         origin);
     
 %===============================SOURCE PROPERTIES==============================%
@@ -164,8 +157,8 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     
     % Source coordinates [units]
     source_x{1} = 2;
-    source_y{1} = [13, 17];
-    source_z{1} = [tLine tLine+tDie];
+    source_y{1} = [-wSig/2, wSig/2];
+    source_z{1} = [0 h];
 
 %     source_x{2} = 2;
 %     source_y{2} = [wGP/2-wSig/2, wGP/2+wSig/2];
@@ -173,8 +166,8 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     % Adapt source in the case of microstrip
     is_microstrip = true;
-    d = 0.3;
-    w = 4;
+    d = 0.6;
+    w = 0.6;
     param.e_eff_0 = epsilon_r(2);
     
 %==============================================================================%
@@ -204,40 +197,20 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
 %===============================MONITOR SETUP==================================%
 
-    monitor_x = 1;
-    monitor_y = [15,15+delta_y];
-    monitor_z = [tLine tLine+tDie];
+    N_temp = l_-1; %#ok<*UNRCH> 
+    
+    monitor_y = [0,0+delta_y];
+    monitor_z = [0 h];
 
-    monitor(1).name = 'port_1';
-    monitor(1).coords = m_to_n(monitor_x, ...
-        (monitor_y(1)):delta_y:(monitor_y(2)-1*delta_y), ...
-        (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
-    monitor(1).normal_direction = 1;
-    monitor(1).fields_to_monitor = [0,0,1,0,1,0];
-
-    monitor_x = [15,15+delta_x];
-    monitor_y = w_-1;
-    monitor_z = [tLine tLine+tDie];
-
-    monitor(2).name = 'port_2';
-    monitor(2).coords = m_to_n( ...
-        (monitor_x(1)):delta_x:(monitor_x(2)-1*delta_y), ...
-        monitor_y, ...
-        (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
-    monitor(2).normal_direction = 2;
-    monitor(2).fields_to_monitor = [0,0,1,0,1,0];
-
-    monitor_x = [15,15+delta_x];
-    monitor_y = 1;
-    monitor_z = [tLine tLine+tDie];
-
-    monitor(3).name = 'port_3';
-    monitor(3).coords = m_to_n( ...
-        (monitor_x(1)):delta_x:(monitor_x(2)-1*delta_y), ...
-        monitor_y, ...
-        (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
-    monitor(3).normal_direction = 2;
-    monitor(3).fields_to_monitor = [0,0,1,0,1,0];
+    for ii = 1:N_temp
+        str = sprintf('port_%dmm',ii);
+        monitor(ii).name = str;
+        monitor(ii).coords = m_to_n(ii, ...
+            (monitor_y(1)):delta_y:(monitor_y(2)-1*delta_y), ...
+            (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
+        monitor(ii).normal_direction = 1;
+        monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
+    end
     
 %==============================================================================%
 
@@ -273,8 +246,8 @@ function [source_signal_E,source_signal_H] = source_func(t,delta_t,delta_x, ...
     GAUSPULSE = 3;
 
     signal_type = EXP;
-    t0 = 20e-15;
-    T = 5e-15;
+    t0 = 20e-12;
+    T = 5e-12;
     
 %==============================================================================%
 

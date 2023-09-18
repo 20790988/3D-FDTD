@@ -3,31 +3,32 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_06.mat";
+result_filename = "monitor_02_zmei_oc.mat";
 
 %Line properties
     %distance between plates and width of line in meters
-    d = 0.3e-6;
-    w = 4e-6;
+    d = 0.6e-3;
+    w = 0.6e-3;
 
-    epsilon_r = 4.6;
+    epsilon_r = 9.6;
 
     is_microstrip = true;
 
 %Sampling
 
     % max number of samples used
-    N_max = 9000;
+    N_max = 2742;
+%     N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
-    k_fft = 1000;
-    N_fft_max = 8000;
+    k_fft = 10;
+    N_fft_max = 60000;
 
     %how many samples of port 1 voltage are set to zero
     N_zero = 0;
 
 %Indices
-    port_index = [1,2];
+    port_index = [1];
 
     number_of_ports = length(port_index);
 
@@ -36,14 +37,18 @@ result_filename = "monitor_06.mat";
 
     %phase correction distance measured away from scattering object
     % in meters
-    phase_distance_ref = 0;
-    phase_distance = [0 0];
+    phase_distance_ref = -(5.2e-3);
+    phase_distance = [-(6.2e-3)];
 
 
 % Theoretical values
-    line_length = 30e-6;
+    line_length = 15e-3;
 
 %=========================================%
+
+load('e_eff.mat');
+load_eff_f = e_eff_f;
+load_f = f;
 
 epsilon_0 = 8.8542e-12;
 mu_0 = 1.2566e-6;
@@ -139,19 +144,22 @@ f_x_ref = F_ref;
 f_x = F_k(port_index,:);
 
 time_plot(t/1e-12,[reference; ...
-    voltage(port_index(1),:); ...
-    voltage(port_index(2),:)],2,{'k','r--','b-.'})
+    voltage(port_index(1),:) ...
+    ],2,{'k','r--','b-.'})
 
 legend('Ref','Port 1','Port 2');
 
 xlabel('time (ps)')
 ylabel('voltage (V)')
 
+e_eff_f_from_file = interp1(load_f,load_eff_f,f,'linear');
+
 %phase correction
-% f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_ref));
-% f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f).*(phase_distance'));
+f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f_from_file)*(phase_distance_ref));
+f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f_from_file).*(phase_distance'));
 
 sn1 = f_x./f_x_ref;
+
 
 %theoretical PEC
 
@@ -159,64 +167,98 @@ s11_th = zeros(1,length(sn1));
 beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
 s21_th = exp(-1i*beta*line_length);
 
-freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
-x_inductex = freq_inductex./1e9;
-
-s21_inductex_mag=[-0.000207403,-0.0360251,-0.12969,-0.27171,-0.44896];
-
-s21_inductex_mag= s21_inductex_mag+20*log10(1/sqrt(2));
+% Zhang_Mei
+S11_mag = readmatrix('OC_mag_S11.csv');
+S11_pha = readmatrix('OC_pha_S11.csv');
 
 
-s11_inductex_mag=[-43.2113,-20.831,-15.3147,-12.1731,-10.0794];
-
-%toepfer
-
-S11 = readmatrix('S11_toepferextract.csv');
-S21 = readmatrix('S21_toepferextract.csv');
-
-figure(5);
+figure(4)
 hold on
-plot(x,20*log10(abs(sn1(2,:))),'b--',LineWidth=2);
-
-% plot(x,20*log10(abs(s21_th)),'b-.',LineWidth=2)
-
-plot(x_inductex,s21_inductex_mag,'r-.',LineWidth=2)
-
-
-plot(S21(:,1),S21(:,2),'k:',LineWidth=2);
+plot(S11_mag(:,1),S11_mag(:,2),'b--',LineWidth=2);
+plot(x,abs(sn1),'r',LineWidth=2);
+xlim([0 60]);
+ylim([0 1.2])
 hold off
-ylabel('Magnitude')
-grid on
-xlim([0 500]);
 xlabel('freq (GHz)')
-ylabel('Magnitude (dB)')
-legend('FDTD s21','Inductex s21','Toepfer S21');
-ylim([-10 0])
+ylabel('Magnitude')
+legend('Zhang Mei s11','FDTD s11');
+grid on
 
-figure(6);
+figure(5)
 hold on
-plot(x,20*log10(abs(sn1(1,:))),'b--',LineWidth=2)
-plot(x_inductex,s11_inductex_mag,'r-.',LineWidth=2)
-plot(S11(:,1),S11(:,2),'k:',LineWidth=2);
-
+plot(S11_pha(:,1),S11_pha(:,2),'b--',LineWidth=2);
+plot(x,angle(sn1),'r',LineWidth=2);
+xlim([0 60]);
+ylim([-2*pi 2*pi]);
 hold off
-ylabel('Magnitude')
-grid on
-xlim([0 500]);
 xlabel('freq (GHz)')
-ylabel('Magnitude (dB)')
-legend('FDTD s11','Inductex s21','Toepfer S11');
-ylim([-70 0])
+ylabel('Angle (rad)')
+legend('Zhang Mei s11','FDTD s11');
+grid on
+
+% ylim([-1 1]);
 
 % figure(7);
-% c = 3e8;
 % hold on
-% plot(x,-2*pi.*f.*15e-6./angle(sn1(2,:))./c,'b--',LineWidth=2);
-% plot(x,-2*pi.*f.*15e-6./angle(s21_th)./c,'b-.',LineWidth=2);
-% yline(v_p_triang./c,'k--',LineWidth=2);
-% yline(v_p_tetra./c,'k-.',LineWidth=2);
+% plot(x,-2*pi.*f.*line_length./unwrap(angle(sn1(2,:))),'b--',LineWidth=2);
+% plot(x,-2*pi.*f.*line_length./unwrap(angle(s21_th)),'k-.',LineWidth=2);
 % hold off
-% ylabel('Phase Velocity normalised to speed of light')
+% ylabel('Phase Velocity [m/s]')
+% grid on
+% xlim([0 60]);
+% xlabel('freq (GHz)')
+% legend('FDTD','Theoretical PEC');
+% ylim([0 3e8])
+
+
+% %toepfer
+% 
+% % S11 = readmatrix('S11_toepfer_extract.csv');
+% % S21 = readmatrix('S21_toepfer_extract.csv');
+% 
+% figure(5);
+% hold on
+% plot(x,20*log10(abs(sn1(2,:))),'b--',LineWidth=2);
+% 
+% plot(x,20*log10(abs(s21_th)),'b-.',LineWidth=2)
+% 
+% % plot(x_inductex,s21_inductex_mag,'r-.',LineWidth=2)
+% 
+% 
+% % plot(S21(:,1),S21(:,2),'k:',LineWidth=2);
+% hold off
+% ylabel('Magnitude')
+% grid on
+% xlim([0 500]);
+% xlabel('freq (GHz)')
+% ylabel('Magnitude (dB)')
+% legend('FDTD s21','Inductex s21','Toepfer S21');
+% ylim([-1 1]);
+% 
+% figure(6);
+% hold on
+% plot(x,20*log10(abs(sn1(1,:))),'b--',LineWidth=2)
+% % plot(x_inductex,s11_inductex_mag,'r-.',LineWidth=2)
+% % plot(S11(:,1),S11(:,2),'k:',LineWidth=2);
+% 
+% hold off
+% ylabel('Magnitude')
+% grid on
+% xlim([0 500]);
+% xlabel('freq (GHz)')
+% ylabel('Magnitude (dB)')
+% legend('FDTD s11','Inductex s11','Toepfer S11');
+% ylim([-70 0])
+% 
+% % figure(7);
+% % c = 3e8;
+% % hold on
+% % plot(x,-2*pi.*f.*15e-6./angle(sn1(2,:))./c,'b--',LineWidth=2);
+% % plot(x,-2*pi.*f.*15e-6./angle(s21_th)./c,'b-.',LineWidth=2);
+% % yline(v_p_triang./c,'k--',LineWidth=2);
+% % yline(v_p_tetra./c,'k-.',LineWidth=2);
+% % hold off
+% % ylabel('Phase Velocity normalised to speed of light')
 % grid on
 % xlim([0 500]);
 % xlabel('freq (GHz)')
