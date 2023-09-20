@@ -14,7 +14,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %===========================SIMULATION PARAMETERS==============================%
     % Simulation control
         %Simulation length [seconds]
-        param.M_t_max = 800e-12;
+        param.M_t_max = 600e-12;
 
         param.gpu_accel = true;
         
@@ -68,7 +68,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         delta_z = delta_x;
     
         %misc. dimension variables
-            l_ = 40;
+            l_ = 45;
             w_ = 14.4;
             
             wSig = 0.6;
@@ -76,7 +76,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
             tLine = 2*delta_z;
             tGP = 4*delta_z;
             h = 0.6;
-            hSim = 7.4;
+            hSim = 2.4;
 
         %Define size of simulation [units]
         M_x = l_;
@@ -91,19 +91,19 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = true;
-        param.bootstrap_field_name = 'field_cap_zmei_0.6_0.6.mat';
+        param.bootstrap_field_name = 'field_cap_zmei_0.6_0.6_short.mat';
         
         %Option to trim bootstrap field [s]
-        param.bootstrap_start_time = 50e-12;
-        param.bootstrap_end_time = 420e-12;
-        %Lower left corner where source should be inserted [units]
-        bootstrap_origin = [2,0,0];
+        param.bootstrap_start_time = 24e-12;
+        param.bootstrap_end_time = 362e-12;
+        %Lower left corner where source should be inserted [cells]
+        bootstrap_origin = [250,0,0];
     
     % Field capture controls
         param.field_capture = false;
         field_cap_normal_direction = 1;
         %range to capture [units]
-        field_cap_x = 15;
+        field_cap_x = 20;
         field_cap_y = 0:delta_y:M_y-1*delta_y;
         field_cap_z = 0:delta_z:M_z-1*delta_z;
         %selection of components to capture
@@ -156,7 +156,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %     source.t_max = 0;
     
     % Source coordinates [units]
-    source_x{1} = 2;
+    source_x{1} = 15;
     source_y{1} = [-wSig/2, wSig/2];
     source_z{1} = [0 h];
 

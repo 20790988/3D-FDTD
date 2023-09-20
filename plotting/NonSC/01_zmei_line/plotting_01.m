@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_00_45um_short.mat";
+result_filename = "monitor_01.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -17,7 +17,7 @@ result_filename = "monitor_00_45um_short.mat";
 %Sampling
 
     % max number of samples used
-    N_max = 2708;
+    N_max = 3500;
 %     N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
@@ -28,7 +28,7 @@ result_filename = "monitor_00_45um_short.mat";
     N_zero = 0;
 
 %Indices
-    port_index = [1,30];
+    port_index = [1,17];
 
     number_of_ports = length(port_index);
 

@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_2.mat";
+result_filename = "monitor_04_new.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -27,7 +27,7 @@ result_filename = "monitor_04_2.mat";
     N_zero = 0;
 
 %Indices
-    port_index = [1,27];
+    port_index = [1,17];
 
     number_of_ports = length(port_index);
 
@@ -41,7 +41,7 @@ result_filename = "monitor_04_2.mat";
 
 
 % Theoretical values
-    line_length = 25e-6;
+    line_length = 15e-6;
 
 %=========================================%
 
@@ -215,17 +215,17 @@ figure(7);
 % c = 3e8;
 c=1;
 hold on
-plot(x,-2*pi.*f.*line_length./angle(sn1(2,:))./c,'b--',LineWidth=2);
-plot(x,-2*pi.*f.*line_length./angle(s21_th)./c,'b-.',LineWidth=2);
-yline(v_p_triang./c,'k--',LineWidth=2);
-yline(v_p_tetra./c,'k-.',LineWidth=2);
+plot(x,-2*pi.*f.*line_length./angle(sn1(2,:)),'b--',LineWidth=2);
+plot(x,-2*pi.*f.*line_length./angle(s21_th),'b-.',LineWidth=2);
+yline(v_p_triang,'k--',LineWidth=2);
+yline(v_p_tetra,'k-.',LineWidth=2);
 hold off
 ylabel('Phase Velocity normalised to speed of light')
 grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
-% ylim([0 1]);
+ylim([0 3e8]);
 
 
 figure(8);

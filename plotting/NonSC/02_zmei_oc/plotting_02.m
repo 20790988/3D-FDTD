@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_02_zmei_oc.mat";
+result_filename = "monitor_02_zmei_oc_new.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -17,7 +17,7 @@ result_filename = "monitor_02_zmei_oc.mat";
 %Sampling
 
     % max number of samples used
-    N_max = 2742;
+    N_max = 1964;
 %     N_max = Inf;
 
     %upsampling factor for fft. N*k samples used

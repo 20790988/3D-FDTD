@@ -27,7 +27,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         
         %Wave velocity for BC
 %         param.c_bc = 0;
-        param.c_bc = 117.01e6;
+        param.c_bc = 116.4e6;
 
     % Material specification
         %Conductivity [S/m]
@@ -76,7 +76,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
             tLine = 2*delta_z;
             tGP = 4*delta_z;
             h = 0.6;
-            hSim = 7.4;
+            hSim = 2.4;
 
         %Define size of simulation [units]
         M_x = l_;
@@ -91,13 +91,13 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = true;
-        param.bootstrap_field_name = 'field_cap_zmei_0.6_0.6.mat';
+        param.bootstrap_field_name = 'field_cap_zmei_0.6_0.6_short.mat';
         
         %Option to trim bootstrap field [s]
-        param.bootstrap_start_time = 50e-12;
-        param.bootstrap_end_time = 420e-12;
-        %Lower left corner where source should be inserted [units]
-        bootstrap_origin = [2,0,0];
+         param.bootstrap_start_time = 24e-12;
+        param.bootstrap_end_time = 362e-12;
+        %Lower left corner where source should be inserted [cells]
+        bootstrap_origin = [33,0,0];
     
     % Field capture controls
         param.field_capture = false;

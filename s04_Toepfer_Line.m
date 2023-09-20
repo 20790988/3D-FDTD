@@ -26,8 +26,8 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         param.mur_bc_order = 2;
         
         %Wave velocity for BC
-        param.c_bc = 0;
-%         param.c_bc = 113.03e6;
+%         param.c_bc = 0;
+        param.c_bc = 111.07e6;
 
     % Material specification
         %Conductivity [S/m]
