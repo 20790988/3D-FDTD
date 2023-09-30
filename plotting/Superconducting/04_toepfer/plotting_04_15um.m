@@ -211,27 +211,46 @@ ylabel('Magnitude (dB)')
 legend('FDTD s11','InductEx S11');
 ylim([-70 0])
 
+figure(9)
+hold on
+plot(x,20*log10(abs(sn1(2,:))),'b',LineWidth=2);
+
+plot(x_inductex,s21_inductex_mag,'b-.',LineWidth=2);
+
+plot(x,20*log10(abs(sn1(1,:))),'r',LineWidth=2);
+plot(x_inductex,s11_inductex_mag,'r-.',LineWidth=2);
+
+hold off
+ylabel('Magnitude')
+grid on
+xlim([0 500]);
+xlabel('freq (GHz)')
+ylabel('Magnitude (dB)')
+legend('FDTD s21','Inductex S21','FDTD s11','InductEx S11');
+
+ylim([-70 10])
+
 figure(7);
 % c = 3e8;
 c=1;
 hold on
 plot(x,-2*pi.*f.*line_length./angle(sn1(2,:)),'b--',LineWidth=2);
-plot(x,-2*pi.*f.*line_length./angle(s21_th),'b-.',LineWidth=2);
+% plot(x,-2*pi.*f.*line_length./angle(s21_th),'b-.',LineWidth=2);
 yline(v_p_triang,'k--',LineWidth=2);
 yline(v_p_tetra,'k-.',LineWidth=2);
 hold off
-ylabel('Phase Velocity normalised to speed of light')
+ylabel('Phase Velocity (m/s)')
 grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
-legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
+legend('FDTD','InductEx triangle','Inductex tetra');
 ylim([0 3e8]);
 
 
 figure(8);
 hold on
 plot(x,angle(sn1(2,:)).*180/pi,'b--',LineWidth=2);
-plot(x,angle(s21_th).*180/pi,'b-.',LineWidth=2);
+% plot(x,angle(s21_th).*180/pi,'b-.',LineWidth=2);
 plot(x_inductex,angle(s21_inductex_phase_triang).*180/pi,'k--',LineWidth=2);
 plot(x_inductex,angle(s21_inductex_phase_tetra).*180/pi,'k-.',LineWidth=2);
 hold off
@@ -239,7 +258,7 @@ ylabel('Phase angle (degrees)')
 grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
-legend('FDTD','Theoretical PEC','InductEx triangle','Inductex tetra');
+legend('FDTD','InductEx triangle','Inductex tetra');
 
 
 

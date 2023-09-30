@@ -13,7 +13,7 @@ global bc_parameter
 
 %============================SIMULATION FILENAME===============================%
 [param, material, source, monitor, bootstrap_monitor] = ...
-    s04_Toepfer_Line();       
+    s09_SFQ_Line_Bootstrap();       
 %====================================\*/=======================================%
 
 
@@ -395,7 +395,7 @@ while stop_cond == false
 %         H_tot_line = (H_tot(:,tempy,tempz));
 %         plot_line(H_tot_line,delta_x*(0:N_x-1),step,'|H_{tot}| (A/m)',1,1/eta);
         
-        tempz = floor(10);
+        tempz = floor(43);
         tempy = floor(N_y/2);
         tempx = floor(N_x/2);
 

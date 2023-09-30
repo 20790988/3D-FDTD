@@ -9,7 +9,7 @@ DIELECTRIC = 3;
 SUPERCONDUCTOR = 4;
 
 %====================PLOT CONTROL====================%
-to_plot = [SUPERCONDUCTOR,DIELECTRIC,PEC];
+to_plot = [SUPERCONDUCTOR,DIELECTRIC];
 plot_source = true;
 
 units_axis = 1e-6;

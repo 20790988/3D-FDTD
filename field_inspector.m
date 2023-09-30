@@ -4,7 +4,7 @@ close all
 %====================SETTINGS=====================%
 db_axis = true;
 %=========================================%
-result_filename = "field_cap.mat";
+result_filename = "field_cap_toepfer_4_0.3.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -43,7 +43,7 @@ H_max = max(abs(Hz),[],"all");
 
 Ez = permute(Ez,[2 1 3]);
 Hz = permute(Hz,[2 1 3]);
-for ii = 1:N
+for ii = 1000:N
     if sum(Ez(:,:,ii),"all") == 0
         continue;
     end

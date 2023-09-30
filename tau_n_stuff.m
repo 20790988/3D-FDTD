@@ -25,7 +25,14 @@ cond_s = 1./(lambda.^2*mu_0*j*w);
 
 
 real_imag_plot(f./1e9,cond_n,1,{'r'});
+subplot(2,1,1);
+title('normal \sigma')
+xlabel('f (GHz)')
+
 real_imag_plot(f./1e9,cond_s,2,{'b'});
+subplot(2,1,1);
+title('superconductive \sigma')
+xlabel('f (GHz)')
 
 % mag_phase_plot(f./1e9,cond_n,1,{'r'});
 % mag_phase_plot(f./1e9,cond_s,2,{'b'});
