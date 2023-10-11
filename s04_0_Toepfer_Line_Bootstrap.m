@@ -91,7 +91,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         grid_pause_on_unaligned = true;
 
     % Bootstrap source controls
-        param.use_bootstrapped_fields = true;
+        param.use_bootstrapped_fields = false;
         param.bootstrap_field_name = 'field_cap_toepfer_4_0.3.mat';
         
         %Option to trim bootstrap field [s]
@@ -101,7 +101,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         bootstrap_origin = [2,0,0];
     
     % Field capture controls
-        param.field_capture = false;
+        param.field_capture = true;
         field_cap_normal_direction = 1;
         %range to capture [units]
         field_cap_x = 15;

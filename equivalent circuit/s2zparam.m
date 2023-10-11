@@ -48,6 +48,7 @@ hold off
 xlabel('freq (GHz)');
 ylabel('L (pH)');
 ylim([0 0.15]);
+grid on
 
 figure(2);
 hold on
@@ -57,6 +58,7 @@ hold off
 xlabel('freq (GHz)');
 ylabel('C (fF)');
 ylim([0 2.5]);
+grid on
 
 
 

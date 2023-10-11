@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_new.mat";
+result_filename = "monitor_04_20um_offset.mat";
 
 %Line properties
     %distance between plates and width of line in meters

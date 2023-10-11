@@ -13,7 +13,7 @@ global bc_parameter
 
 %============================SIMULATION FILENAME===============================%
 [param, material, source, monitor, bootstrap_monitor] = ...
-    s09_SFQ_Line_Bootstrap();       
+    s04_Toepfer_Line();      
 %====================================\*/=======================================%
 
 
@@ -349,13 +349,13 @@ while stop_cond == false
             Ey_inc(1, ...
                 bootstrap_origin(2)+offset:bootstrap_origin(2)+s(2)-offset+1 ...
                 ,bootstrap_origin(3)+offset:bootstrap_origin(3)+s(3)-offset+1)  ...
-                = (source_field_Ey(step+bootstrap_start_index, ...
+                = (source_field_Ey(step+1+bootstrap_start_index, ...
                 offset:end-offset+1, ...
                 offset:end-offset+1));
             Ez_inc(1, ...
                 bootstrap_origin(2)+offset:bootstrap_origin(2)+s(2)-offset+1 ...
                 ,bootstrap_origin(3)+offset:bootstrap_origin(3)+s(3)-offset+1)  ...
-                = (source_field_Ez(step+bootstrap_start_index, ...
+                = (source_field_Ez(step+1+bootstrap_start_index, ...
                 offset:end-offset+1, ...
                 offset:end-offset+1));
               
@@ -588,22 +588,22 @@ while stop_cond == false
             [iii,jjj,kkk] = unpack_coords(bootstrap_monitor(num).coords);
     
             if bootstrap_monitor(num).fields_to_monitor(1)
-                bootstrap_values{num}{1}(:,:,step+1) = Ex_old(iii,jjj,kkk);
+                bootstrap_values{num}{1}(:,:,step+1) = Ex_old(iii+1,jjj,kkk);
             end
             if bootstrap_monitor(num).fields_to_monitor(1)
-                bootstrap_values{num}{2}(:,:,step+1) = Ey_old(iii,jjj,kkk);
+                bootstrap_values{num}{2}(:,:,step+1) = Ey_old(iii+1,jjj,kkk);
             end
             if bootstrap_monitor(num).fields_to_monitor(3)
-                bootstrap_values{num}{3}(:,:,step+1) = Ez_old(iii,jjj,kkk);
+                bootstrap_values{num}{3}(:,:,step+1) = Ez_old(iii+1,jjj,kkk);
             end
             if bootstrap_monitor(num).fields_to_monitor(4)
-                bootstrap_values{num}{4}(:,:,step+1) = Hx_old(iii,jjj,kkk);
+                bootstrap_values{num}{4}(:,:,step+1) = Hx_old(iii-1,jjj,kkk);
             end
             if bootstrap_monitor(num).fields_to_monitor(5)
-                bootstrap_values{num}{5}(:,:,step+1) = Hy_old(iii,jjj,kkk);
+                bootstrap_values{num}{5}(:,:,step+1) = Hy_old(iii-1,jjj,kkk);
             end
             if bootstrap_monitor(num).fields_to_monitor(6)
-                bootstrap_values{num}{6}(:,:,step+1) = Hz_old(iii,jjj,kkk);
+                bootstrap_values{num}{6}(:,:,step+1) = Hz_old(iii-1,jjj,kkk);
             end
         end
     end

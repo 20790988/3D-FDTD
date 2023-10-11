@@ -92,7 +92,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = true;
-        param.bootstrap_field_name = 'field_cap_toepfer_4_0.3.mat';
+        param.bootstrap_field_name = 'field_cap_toepfer_offset.mat';
         
         %Option to trim bootstrap field [s]
         param.bootstrap_start_time = 40e-15;
