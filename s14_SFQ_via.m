@@ -14,7 +14,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %===========================SIMULATION PARAMETERS==============================%
     % Simulation control
         %Simulation length [seconds]
-        param.M_t_max = 500e-15;
+        param.M_t_max = 800e-15;
 
         param.gpu_accel = true;
         
@@ -26,8 +26,8 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         param.mur_bc_order = 2;
         
         %Wave velocity for BC
-        param.c_bc = 0;
-%         param.c_bc = 113.03e6;
+%         param.c_bc = 0;
+        param.c_bc = 95.629e6;
 
     % Material specification
         %Conductivity [S/m]
@@ -68,7 +68,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         delta_z = delta_x;
     
         %misc. dimension variables
-            l_ = 50;
+            l_ = 30;
             w_ = 10;
             
             wSig = 4.4;
@@ -96,7 +96,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         param.bootstrap_start_time = 70e-15;
         param.bootstrap_end_time = 400e-15;
         %Lower left corner where source should be inserted [cells]
-        bootstrap_origin = [441,0,0];
+        bootstrap_origin = [41,0,0];
     
     % Field capture controls
         param.field_capture = false;
@@ -131,36 +131,38 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
     origin,{0,0,0});
-
+    
     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
+    origin,{10,0,0});
+
+    grid = viablock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
     origin,{10,0,0});
 
     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
     origin,{20,0,0});
 
-    grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
-    origin,{30,0,0});
-
-    grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
-    origin,{40,0,0});
-
      %Sig
-     grid = add_cuboid(grid,delta,0,l_, ...
-        w_/2-wSig/2,w_/2+wSig/2, ...
+     grid = add_cuboid(grid,delta,0,15, ...
+        5-wSig/2,5+wSig/2, ...
         6*tLine,7*tLine, ...
         SUPERCONDUCTOR, ...
         origin);
-       
+
+     grid = add_cuboid(grid,delta,15,30, ...
+        5-wSig/2,5+wSig/2, ...
+        2*tLine,3*tLine, ...
+        SUPERCONDUCTOR, ...
+        origin);
 %===============================SOURCE PROPERTIES==============================%
     %duration of source
 %     source.t_max = 0;
     
     % Source coordinates [units]
-    source_x{1} = 22;
+    source_x{1} = 2;
     source_y{1} = [wGP/2-wSig/2, wGP/2+wSig/2];
     source_z{1} = [5 6].*tLine;
 
-    source_x{2} = 22;
+    source_x{2} = 2;
     source_y{2} = [wGP/2-wSig/2, wGP/2+wSig/2];
     source_z{2} = [7 8].*tLine;
 
@@ -196,13 +198,25 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     end
 
 %===============================MONITOR SETUP==================================%
-
+    
     N_temp = l_-1; %#ok<*UNRCH> 
     
     monitor_y = [w_/2,w_/2+delta_y];
     monitor_z = [7 8].*tLine;
 
-    for ii = 1:N_temp
+    for ii = 1:15
+        str = sprintf('port_%dmm',ii);
+        monitor(ii).name = str;
+        monitor(ii).coords = m_to_n(ii, ...
+            (monitor_y(1)):delta_y:(monitor_y(2)-1*delta_y), ...
+            (monitor_z(1)):delta_z:(monitor_z(2)-1*delta_z), delta, origin);
+        monitor(ii).normal_direction = 1;
+        monitor(ii).fields_to_monitor = [0,0,1,0,1,0];
+    end
+
+    monitor_z = [3 4].*tLine;
+
+    for ii = 16:N_temp
         str = sprintf('port_%dmm',ii);
         monitor(ii).name = str;
         monitor(ii).coords = m_to_n(ii, ...
@@ -570,6 +584,30 @@ function grid = add_cuboid(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax, ...
 
     grid(min{1}:(max{1}-1),min{2}:(max{2}-1),min{3}:(max{3}-1)) = material;
 
+end
+
+function grid = add_triangle(grid,delta,xmin,xmax,ymin,ymax,zmin,zmax, ...
+    material,relative_to)
+    
+    if xmin>xmax
+        [xmin,xmax] = swop(xmin,xmax);
+    end
+
+    if ymin>ymax
+        [ymin,ymax] = swop(ymin,ymax);
+    end
+
+    if zmin>zmax
+        [zmin,zmax] = swop(zmin,zmax);
+    end
+      
+    min = m_to_n(xmin,ymin,zmin,delta,relative_to);
+    max = m_to_n(xmax,ymax,zmax,delta,relative_to);
+    
+    
+    for ii = 1:(max{1}-min{1})
+        grid(min{1}+ii,min{2}:(min{2}-1+ii),min{3}:(max{3}-1)) = material;
+    end
 end
 
 %==============================================================================%

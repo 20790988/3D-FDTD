@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_09_20um.mat";
+result_filename = "monitor_09_20um_4.4.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -17,7 +17,7 @@ result_filename = "monitor_09_20um.mat";
 %Sampling
 
     % max number of samples used
-    N_max = 4100;
+    N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
     k_fft = 1000;

@@ -27,7 +27,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         
         %Wave velocity for BC
 %         param.c_bc = 0;
-        param.c_bc = 95.627e6;
+        param.c_bc = 95.629e6;
 
     % Material specification
         %Conductivity [S/m]
@@ -71,7 +71,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
             l_ = 20;
             w_ = 10;
             
-            wSig = 4.5;
+            wSig = 4.4;
             wGP = 10;
         
             tLine = 0.2;
@@ -90,7 +90,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = true;
-        param.bootstrap_field_name = 'field_cap_rsfq.mat';
+        param.bootstrap_field_name = 'field_cap_rsfq_4.4_0.2.mat';
         
         %Option to trim bootstrap field [s]
         param.bootstrap_start_time = 70e-15;

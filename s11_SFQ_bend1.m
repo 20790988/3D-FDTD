@@ -27,7 +27,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         
         %Wave velocity for BC
 %         param.c_bc = 0;
-        param.c_bc = 95.627e6;
+        param.c_bc = 95.629e6;
 
     % Material specification
         %Conductivity [S/m]
@@ -90,7 +90,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 
     % Bootstrap source controls
         param.use_bootstrapped_fields = true;
-        param.bootstrap_field_name = 'field_cap_rsfq.mat';
+        param.bootstrap_field_name = 'field_cap_rsfq_4.4_0.2.mat';
         
         %Option to trim bootstrap field [s]
         param.bootstrap_start_time = 70e-15;
@@ -128,18 +128,18 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
     grid(:,:,:) = DIELECTRIC;
     
     origin = {0,0,tAirGap};
-% 
+
+    grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
+    origin,{0,0,0});
+
 %     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
-%     origin,{0,0,0});
-% 
-% %     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
-% %     origin,{0,10,0});
-% 
-%     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
-%     origin,{10,0,0});
-% 
-%     grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
-%     origin,{10,10,0});
+%     origin,{0,10,0});
+
+    grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
+    origin,{10,0,0});
+
+    grid = routeblock(grid,delta,SUPERCONDUCTOR,DIELECTRIC, ...
+    origin,{10,10,0});
 
      %Sig
      grid = add_cuboid(grid,delta,0,12.8, ...

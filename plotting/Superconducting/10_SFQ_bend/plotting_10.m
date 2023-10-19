@@ -3,13 +3,13 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_09_50um_4.4.mat";
+result_filename = "monitor_05.mat";
 
 %Line properties
     %distance between plates and width of line in meters
 %     d = 0.3e-6;
 %     w = 4e-6;
-% 
+
     epsilon_r = 4.6;
 
     is_microstrip = false;
@@ -17,7 +17,7 @@ result_filename = "monitor_09_50um_4.4.mat";
 %Sampling
 
     % max number of samples used
-    N_max = 4100;
+    N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
     k_fft = 1000;
@@ -27,7 +27,7 @@ result_filename = "monitor_09_50um_4.4.mat";
     N_zero = 0;
 
 %Indices
-    port_index = [1,32];
+    port_index = [1,2];
 
     number_of_ports = length(port_index);
 
@@ -36,14 +36,25 @@ result_filename = "monitor_09_50um_4.4.mat";
 
     %phase correction distance measured away from scattering object
     % in meters
-    phase_distance_ref = 0;
-    phase_distance = [0 0];
+    phase_distance_ref = -11e-6;
+    phase_distance = [-12e-6 -12e-6];
 
 
 % Theoretical values
-    line_length = 10e-6;
+%     line_length = 30e-6;
 
 %=========================================%
+
+load('e_eff.mat');
+load_eff_f = e_eff_from_sim;
+load_f = f;
+
+load('sparams_equiv_circuit.mat');
+
+s11_eq_cir = s11;
+s21_eq_cir = s21;
+f_eq_cir = f;
+
 
 epsilon_0 = 8.8542e-12;
 mu_0 = 1.2566e-6;
@@ -77,19 +88,15 @@ num_monitors = length(monitor_values);
 for i = 1:1:num_monitors
     Ez = cell2mat(monitor_values{i}(3));
     num_cells = size(Ez,2);
-    middle = floor(size(Ez,1)/2);
-    if middle == 0
-        middle = 1;
-    end
-    voltage_temp = sum(Ez(middle,:,:),2);
+    voltage_temp = sum(Ez,2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
-    voltage(i,:) = voltage_temp(1:N);
+    voltage(i,:) = -voltage_temp(1:N);
 end
 
 
 t = (0:N-1)*delta_t;
 figure(1)
-plot(t./1e-12,voltage(32,:));
+plot(t./1e-12,voltage);
 grid on
 xlabel('Time (ps)')
 ylabel('Voltage')
@@ -99,9 +106,6 @@ if reference_index == 0
     reference = monitor.source_from_bootstrap;
     reference = permute(reference,[2 3 1]);
     middle = floor(size(reference,1)/2);
-    if middle == 0
-        middle = 1;
-    end
     reference = reference(middle,:,:);
     num_cells = size(reference,2);
     voltage_temp = sum(reference,2);
@@ -154,71 +158,49 @@ legend('Ref','Port 1','Port 2');
 xlabel('time (ps)')
 ylabel('voltage (V)')
 
+e_eff_f_from_file = interp1(load_f,load_eff_f,f,'linear');
+
 %phase correction
-f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f)*(phase_distance_ref));
-f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f).*(phase_distance'));
+f_x_ref = f_x_ref.*exp(j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f_from_file)*(phase_distance_ref));
+f_x = f_x.*exp(-j*2*pi*f.*sqrt(mu_0*epsilon_0*e_eff_f_from_file).*(phase_distance'));
 
 sn1 = f_x./f_x_ref;
 
 
 %theoretical PEC
 
-s11_th = zeros(1,length(sn1));
-beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
-s21_th = exp(-1i*beta*line_length);
+% s11_th = zeros(1,length(sn1));
+% beta = 2*pi*f.*sqrt(mu_0*epsilon_0.*e_eff_f);
+% s21_th = exp(-1i*beta*line_length);
 
 %inductex mag
 
 freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
 x_inductex = freq_inductex./1e9;
-s11_inductex_mag=[-66.5558,-44.142,-38.5389,-35.2684,-33.0195];
-s21_inductex_mag=[-9.5839E-7,-0.00016715,-0.00060734,-0.00128975,-0.00216477];
 
-%inductex phase
-v_p_triang = 113.03e6;
-s21_inductex_phase_triang = exp(-j*2*pi*freq_inductex*15e-6/v_p_triang);
+s21_inductex_mag=[-7.33162E-6,-0.00127104,-0.00455141,-0.00943939,-0.0153382];
+s11_inductex_mag=[-57.7176,-35.3275,-29.7882,-26.6209,-24.5127];
 
-v_p_tetra = 114.31e6;
-s21_inductex_phase_tetra = exp(-j*2*pi*freq_inductex*15e-6/v_p_tetra);
+%toepfer
 
-figure(5);
-hold on
-plot(x,20*log10(abs(sn1(2,:))),'b--',LineWidth=2);
-
-plot(x,20*log10(abs(s21_th)),'b-.',LineWidth=2)
-
-plot(x_inductex,s21_inductex_mag,'k:',LineWidth=2)
-hold off
-ylabel('Magnitude')
-grid on
-xlim([0 500]);
-xlabel('freq (GHz)')
-ylabel('Magnitude (dB)')
-legend('FDTD s21','Theoretical S21','Inductex S21');
-ylim([-2 2]);
-
-figure(6);
-hold on
-plot(x,20*log10(abs(sn1(1,:))),'b--',LineWidth=2)
-plot(x_inductex,s11_inductex_mag,'k:',LineWidth=2)
-
-hold off
-ylabel('Magnitude')
-grid on
-xlim([0 500]);
-xlabel('freq (GHz)')
-ylabel('Magnitude (dB)')
-legend('FDTD s11','InductEx S11');
-ylim([-70 0])
+S11 = readmatrix('S11_toepfer_extract.csv');
+S21 = readmatrix('S21_toepfer_extract.csv');
 
 figure(9)
 hold on
-plot(x,20*log10(abs(sn1(2,:))),'b',LineWidth=2);
 
-plot(x_inductex,s21_inductex_mag,'b-.',LineWidth=2);
 
-plot(x,20*log10(abs(sn1(1,:))),'r',LineWidth=2);
-plot(x_inductex,s11_inductex_mag,'r-.',LineWidth=2);
+plot(x,20*log10(abs(sn1(1,:))),'r');
+plot(x,20*log10(abs(sn1(2,:))),'r--');
+
+plot(x_inductex,s11_inductex_mag,'k');
+plot(x_inductex,s21_inductex_mag,'k--');
+
+plot(S11(:,1),S11(:,2),'m');
+plot(S21(:,1),S21(:,2),'m--');
+
+plot(f_eq_cir/1e9,20*log10(abs(s11_eq_cir)),'b');
+plot(f_eq_cir/1e9,20*log10(abs(s21_eq_cir)),'b--');
 
 hold off
 ylabel('Magnitude')
@@ -226,63 +208,71 @@ grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 ylabel('Magnitude (dB)')
-legend('FDTD s21','Inductex S21','FDTD s11','InductEx S11');
+legend('FDTD s11','FDTD s21','InductEx s11','InductEx s21','Toepfer s11','Toepfer s21','Eqv cir s11','Eqv cir s21');
 
 ylim([-70 10])
 
+
+% figure(5);
+% hold on
+% plot(x,20*log10(abs(sn1(2,:))),'b--',LineWidth=2);
+% 
+% % plot(x,20*log10(abs(s21_th)),'b-.',LineWidth=2)
+% 
+% plot(x_inductex,s21_inductex_mag,'r-.',LineWidth=2)
+% 
+% 
+% plot(S21(:,1),S21(:,2),'k:',LineWidth=2);
+% hold off
+% ylabel('Magnitude')
+% grid on
+% xlim([0 500]);
+% xlabel('freq (GHz)')
+% ylabel('Magnitude (dB)')
+% legend('FDTD s21','Inductex s21','Toepfer S21');
+% ylim([-1 1]);
+% 
+% figure(6);
+% hold on
+% plot(x,20*log10(abs(sn1(1,:))),'b--',LineWidth=2)
+% plot(x_inductex,s11_inductex_mag,'r-.',LineWidth=2)
+% plot(S11(:,1),S11(:,2),'k:',LineWidth=2);
+% 
+% hold off
+% ylabel('Magnitude')
+% grid on
+% xlim([0 500]);
+% xlabel('freq (GHz)')
+% ylabel('Magnitude (dB)')
+% legend('FDTD s11','Inductex s11','Toepfer S11');
+% ylim([-70 0])
+
 figure(7);
-% c = 3e8;
-c=1;
 hold on
-plot(x,-2*pi.*f.*line_length./angle(sn1(2,:)),'b--',LineWidth=2);
-% plot(x,-2*pi.*f.*line_length./angle(s21_th),'b-.',LineWidth=2);
-yline(v_p_triang,'k--',LineWidth=2);
-yline(v_p_tetra,'k-.',LineWidth=2);
+plot(x,-2*pi.*f.*(4)*1e-6./angle(sn1(2,:)),'b--',LineWidth=2);
 hold off
 ylabel('Phase Velocity (m/s)')
 grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
-legend('FDTD','InductEx triangle','Inductex tetra');
-ylim([0 3e8]);
+legend('FDTD');
+ylim([0 3e8])
 
 
 figure(8);
 hold on
-plot(x,angle(sn1(2,:)).*180/pi,'b--',LineWidth=2);
-% plot(x,angle(s21_th).*180/pi,'b-.',LineWidth=2);
-plot(x_inductex,angle(s21_inductex_phase_triang).*180/pi,'k--',LineWidth=2);
-plot(x_inductex,angle(s21_inductex_phase_tetra).*180/pi,'k-.',LineWidth=2);
+plot(x,angle(sn1(1,:)).*180/pi,'r');
+plot(x,angle(sn1(2,:)).*180/pi,'r--');
+
+plot(f_eq_cir/1e9,angle(s11_eq_cir).*180/pi,'b');
+plot(f_eq_cir/1e9,angle(s21_eq_cir).*180/pi,'b--');
 hold off
 ylabel('Phase angle (degrees)')
 grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
-legend('FDTD','InductEx triangle','Inductex tetra');
+legend('FDTD s11','FDTD s21','Eqv cir s11','Eqv cir s21');
 
-
-phase = angle(sn1(2,:));
-
-e_eff_from_sim = (phase./(-line_length*2*pi.*f*sqrt(mu_0*epsilon_0))).^2;
-
-% e_eff_from_sim_2 = (3e8./(-2*pi.*f.*line_length./angle(sn1(2,:)))).^2;
-
-figure(10)
-hold on
-yline(epsilon_r,'r','LineWidth',2);
-plot(x,e_eff_f,'b','LineWidth',2);
-plot(x,e_eff_from_sim,'k','LineWidth',2);
-% plot(x,e_eff_from_sim_2);
-
-hold off
-grid on
-xlim([0 500])
-ylabel('\epsilon_{eff}')
-legend('Theoretical PEC','Theoretical adapted for microstrip PEC','From simulation')
-xlabel('freq (GHz)')
-% ylim([0 8])
-
-save('e_eff.mat','e_eff_from_sim','f');
 
 
 
