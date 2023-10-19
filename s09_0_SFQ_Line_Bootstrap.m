@@ -89,17 +89,17 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
         grid_pause_on_unaligned = true;
 
     % Bootstrap source controls
-        param.use_bootstrapped_fields = false;
-        param.bootstrap_field_name = 'field_cap_toepfer_4_0.3.mat';
+        param.use_bootstrapped_fields = true;
+        param.bootstrap_field_name = 'field_cap_rsfq.mat';
         
         %Option to trim bootstrap field [s]
-        param.bootstrap_start_time = 40e-15;
-        param.bootstrap_end_time = 633e-15;
+        param.bootstrap_start_time = 70e-15;
+        param.bootstrap_end_time = 400e-15;
         %Lower left corner where source should be inserted [cells]
-        bootstrap_origin = [2,0,0];
+        bootstrap_origin = [441,0,0];
     
     % Field capture controls
-        param.field_capture = true;
+        param.field_capture = false;
         field_cap_normal_direction = 1;
         %range to capture [units]
         field_cap_x = 32;
@@ -156,11 +156,11 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %     source.t_max = 0;
     
     % Source coordinates [units]
-    source_x{1} = 20;
+    source_x{1} = 22;
     source_y{1} = [wGP/2-wSig/2, wGP/2+wSig/2];
     source_z{1} = [5 6].*tLine;
 
-    source_x{2} = 2;
+    source_x{2} = 22;
     source_y{2} = [wGP/2-wSig/2, wGP/2+wSig/2];
     source_z{2} = [7 8].*tLine;
 
