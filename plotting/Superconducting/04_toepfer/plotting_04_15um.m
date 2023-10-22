@@ -244,7 +244,7 @@ grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 legend('FDTD','InductEx triangle','Inductex tetra');
-ylim([0 3e8]);
+ylim([1.08e8 1.18e8]);
 
 
 figure(8);

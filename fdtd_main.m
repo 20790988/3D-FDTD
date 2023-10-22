@@ -13,7 +13,7 @@ global bc_parameter
 
 %============================SIMULATION FILENAME===============================%
 [param, material, source, monitor, bootstrap_monitor] = ...
-    s14_SFQ_via();      
+    s04_0_Toepfer_Line_Bootstrap();      
 %====================================\*/=======================================%
 
 

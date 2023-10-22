@@ -42,23 +42,28 @@ C = 1./(j*2*pi*f.*z12);
 
 figure(1);
 hold on
-plot(f/1e9,real(L)./1e-12);
+plot(f/1e9,real(L)./1e-12,'m','LineWidth',2);
 xlim([0 500]);
 hold off
 xlabel('freq (GHz)');
 ylabel('L (pH)');
-ylim([0 0.15]);
+yline(3.1188e-13./1e-12,'b--','LineWidth',2);  
 grid on
+legend('FDTD','Formula from Javadzadeh et al','Location','southeast')
+ylim([0 0.33]);
+
 
 figure(2);
 hold on
-plot(f/1e9,real(C)/1e-15);
+plot(f/1e9,real(C)/1e-15,'m','LineWidth',2);
 xlim([0 500]);
 hold off
 xlabel('freq (GHz)');
 ylabel('C (fF)');
-ylim([0 2.5]);
+yline(3.0908e-15./1e-15,'b--','LineWidth',2)
+ylim([0 3.2]);
 grid on
+legend('FDTD','Formula from Javadzadeh et al','Location','southeast')
 
 
 
