@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_04_20um_offset.mat";
+result_filename = "monitor_04_20um_new.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -17,7 +17,7 @@ result_filename = "monitor_04_20um_offset.mat";
 %Sampling
 
     % max number of samples used
-    N_max = 7000;
+    N_max = Inf;
 
     %upsampling factor for fft. N*k samples used
     k_fft = 1000;
