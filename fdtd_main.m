@@ -13,7 +13,7 @@ global bc_parameter
 
 %============================SIMULATION FILENAME===============================%
 [param, material, source, monitor, bootstrap_monitor] = ...
-    s04_Toepfer_Line();      
+    s13_SFQ_bend3();      
 %====================================\*/=======================================%
 
 
@@ -565,7 +565,7 @@ while stop_cond == false
         if monitor(num).fields_to_monitor(1)
             monitor_values{num}{1}(:,:,step+1) = Ex_old(iii,jjj,kkk);
         end
-        if monitor(num).fields_to_monitor(1)
+        if monitor(num).fields_to_monitor(2)
             monitor_values{num}{2}(:,:,step+1) = Ey_old(iii,jjj,kkk);
         end
         if monitor(num).fields_to_monitor(3)
@@ -590,7 +590,7 @@ while stop_cond == false
             if bootstrap_monitor(num).fields_to_monitor(1)
                 bootstrap_values{num}{1}(:,:,step+1) = Ex_old(iii,jjj,kkk);
             end
-            if bootstrap_monitor(num).fields_to_monitor(1)
+            if bootstrap_monitor(num).fields_to_monitor(2)
                 bootstrap_values{num}{2}(:,:,step+1) = Ey_old(iii,jjj,kkk);
             end
             if bootstrap_monitor(num).fields_to_monitor(3)

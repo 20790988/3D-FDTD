@@ -7,17 +7,19 @@ lambda_0 = 85e-9;
 T_c = 9.25;
 T_op = 4.2;
 
-tau_n = 61e-15;
+% tau_n = 61e-15;
 mu_0 = 1.2566e-6;
 
 cond_DC = 6.7e6;
 
-f = 1e9:1e9:500e9;
+f = 1e9:1e9:1000e9;
 w = 2*pi*f;
 
 lambda = lambda_0/(sqrt(1-(T_op/T_c)^4));
 
-cond_n_0 = cond_DC*(T_op/T_c).^4;
+tau_n = cond_DC*lambda_0.^2*mu_0;
+
+cond_n_approx = cond_DC*(T_op/T_c).^4;
 
 cond_n = cond_DC*(T_op/T_c).^4./(j*w*tau_n+1);
 
@@ -26,6 +28,7 @@ cond_s = 1./(lambda.^2*mu_0*j*w);
 
 real_imag_plot(f./1e9,cond_n,1,{'r'});
 subplot(2,1,1);
+yline(cond_n_approx,'r--','LineWidth',2)
 title('normal \sigma')
 xlabel('f (GHz)')
 
@@ -33,6 +36,10 @@ real_imag_plot(f./1e9,cond_s,2,{'b'});
 subplot(2,1,1);
 title('superconductive \sigma')
 xlabel('f (GHz)')
+
+figure(2);
+subplot(2,1,2);
+ylim([-2e8,0]);
 
 % mag_phase_plot(f./1e9,cond_n,1,{'r'});
 % mag_phase_plot(f./1e9,cond_s,2,{'b'});
@@ -56,7 +63,7 @@ function mag_phase_plot(x,f_x,fig_no,linestyles,dB_flag)
     hold on
     for i = 1:s
         if ~isempty(linestyles{i})
-            plot(x,mag(i,:),linestyles{i});
+            plot(x,mag(i,:),linestyles{i},'LineWidth',2);
         else
             plot(x,mag(i,:));
         end
@@ -72,9 +79,9 @@ function mag_phase_plot(x,f_x,fig_no,linestyles,dB_flag)
     hold on
     for i = 1:s
         if ~isempty(linestyles{i})
-            plot(x,pha(i,:),linestyles{i});
+            plot(x,pha(i,:),linestyles{i},'LineWidth',2);
         else
-            plot(x,pha(i,:));
+            plot(x,pha(i,:),'LineWidth',2);
         end
     end
     hold off
@@ -101,7 +108,7 @@ function real_imag_plot(x,f_x,fig_no,linestyles)
     hold on
     for i = 1:s
         if ~isempty(linestyles{i})
-            plot(x,re(i,:),linestyles{i});
+            plot(x,re(i,:),linestyles{i},'LineWidth',2);
         else
             plot(x,re(i,:));
         end
@@ -117,7 +124,7 @@ function real_imag_plot(x,f_x,fig_no,linestyles)
     hold on
     for i = 1:s
         if ~isempty(linestyles{i})
-            plot(x,im(i,:),linestyles{i});
+            plot(x,im(i,:),linestyles{i},'LineWidth',2);
         else
             plot(x,im(i,:));
         end

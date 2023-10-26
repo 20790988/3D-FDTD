@@ -3,7 +3,7 @@ close all
 
 %====================SETTINGS=====================%
 
-result_filename = "monitor_05.mat";
+result_filename = "monitor_13.mat";
 
 %Line properties
     %distance between plates and width of line in meters
@@ -36,8 +36,8 @@ result_filename = "monitor_05.mat";
 
     %phase correction distance measured away from scattering object
     % in meters
-    phase_distance_ref = -11e-6;
-    phase_distance = [-12e-6 -12e-6];
+    phase_distance_ref = -10.8e-6;
+    phase_distance = [-11.8e-6 -11.8e-6];
 
 
 % Theoretical values
@@ -49,11 +49,11 @@ load('e_eff.mat');
 load_eff_f = e_eff_from_sim;
 load_f = f;
 
-load('sparams_equiv_circuit.mat');
-
-s11_eq_cir = s11;
-s21_eq_cir = s21;
-f_eq_cir = f;
+% load('sparams_equiv_circuit.mat');
+% 
+% s11_eq_cir = s11;
+% s21_eq_cir = s21;
+% f_eq_cir = f;
 
 
 epsilon_0 = 8.8542e-12;
@@ -90,7 +90,7 @@ for i = 1:1:num_monitors
     num_cells = size(Ez,2);
     voltage_temp = sum(Ez,2);
     voltage_temp = squeeze(voltage_temp)*num_cells*delta_x;
-    voltage(i,:) = -voltage_temp(1:N);
+    voltage(i,:) = voltage_temp(1:N);
 end
 
 
@@ -175,16 +175,16 @@ sn1 = f_x./f_x_ref;
 
 %inductex mag
 
-freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
-x_inductex = freq_inductex./1e9;
-
-s21_inductex_mag=[-7.33162E-6,-0.00127104,-0.00455141,-0.00943939,-0.0153382];
-s11_inductex_mag=[-57.7176,-35.3275,-29.7882,-26.6209,-24.5127];
+% freq_inductex=[1E10,1.325E11,2.55E11,3.775E11,5E11];
+% x_inductex = freq_inductex./1e9;
+% 
+% s21_inductex_mag=[-7.33162E-6,-0.00127104,-0.00455141,-0.00943939,-0.0153382];
+% s11_inductex_mag=[-57.7176,-35.3275,-29.7882,-26.6209,-24.5127];
 
 %toepfer
 
-S11 = readmatrix('S11_toepfer_extract.csv');
-S21 = readmatrix('S21_toepfer_extract.csv');
+% S11 = readmatrix('S11_toepfer_extract.csv');
+% S21 = readmatrix('S21_toepfer_extract.csv');
 
 figure(9)
 hold on
@@ -192,15 +192,15 @@ hold on
 
 plot(x,20*log10(abs(sn1(1,:))),'r');
 plot(x,20*log10(abs(sn1(2,:))),'r--');
+% 
+% plot(x_inductex,s11_inductex_mag,'k');
+% plot(x_inductex,s21_inductex_mag,'k--');
 
-plot(x_inductex,s11_inductex_mag,'k');
-plot(x_inductex,s21_inductex_mag,'k--');
+% plot(S11(:,1),S11(:,2),'m');
+% plot(S21(:,1),S21(:,2),'m--');
 
-plot(S11(:,1),S11(:,2),'m');
-plot(S21(:,1),S21(:,2),'m--');
-
-plot(f_eq_cir/1e9,20*log10(abs(s11_eq_cir)),'b');
-plot(f_eq_cir/1e9,20*log10(abs(s21_eq_cir)),'b--');
+% plot(f_eq_cir/1e9,20*log10(abs(s11_eq_cir)),'b');
+% plot(f_eq_cir/1e9,20*log10(abs(s21_eq_cir)),'b--');
 
 hold off
 ylabel('Magnitude')
@@ -264,8 +264,8 @@ hold on
 plot(x,angle(sn1(1,:)).*180/pi,'r');
 plot(x,angle(sn1(2,:)).*180/pi,'r--');
 
-plot(f_eq_cir/1e9,angle(s11_eq_cir).*180/pi,'b');
-plot(f_eq_cir/1e9,angle(s21_eq_cir).*180/pi,'b--');
+% plot(f_eq_cir/1e9,angle(s11_eq_cir).*180/pi,'b');
+% plot(f_eq_cir/1e9,angle(s21_eq_cir).*180/pi,'b--');
 hold off
 ylabel('Phase angle (degrees)')
 grid on
@@ -274,7 +274,7 @@ xlabel('freq (GHz)')
 legend('FDTD s11','FDTD s21','Eqv cir s11','Eqv cir s21');
 
 
-
+save('sparams.mat','f','sn1');
 
 % c = 1/sqrt(epsilon_0*mu_0);
 % %TM_0 surface wave mode critical freq

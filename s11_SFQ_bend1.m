@@ -211,7 +211,7 @@ function [param, grid, source, monitor, bootstrap] = s04_Toepfer_Line()
 %===============================MONITOR SETUP==================================%
     
     monitor_x = 1;
-    monitor_y = [5,5/2+delta_y];
+    monitor_y = [5,5+delta_y];
     monitor_z = [7 8].*tLine;
 
     monitor(1).name = 'port_1';
