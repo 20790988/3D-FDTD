@@ -208,7 +208,7 @@ grid on
 xlim([0 500]);
 xlabel('freq (GHz)')
 ylabel('Magnitude (dB)')
-legend('FDTD s11','FDTD s21','InductEx s11','InductEx s21','Toepfer s11','Toepfer s21','Eqv cir s11','Eqv cir s21');
+legend('FDTD s11','FDTD s21','Eqv cir s11','Eqv cir s21');
 
 ylim([-70 10])
 

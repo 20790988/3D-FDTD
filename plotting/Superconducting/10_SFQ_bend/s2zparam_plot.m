@@ -16,12 +16,12 @@ load("LC_13.mat");
 L_(:,4) = L;
 C_(:,4) = C;
 
-newcolors = [0 0 255
-             255 0 0
-             255 0 255
-             0 255 255]./255;
+% newcolors = [0 0 255
+%              255 0 0
+%              255 0 255
+%              0 255 255]./255;
          
-colororder(newcolors);
+colororder(acc_colormap);
 
 figure(1);
 hold on
@@ -38,7 +38,7 @@ ylim([0 0.35]);
 
 
 figure(2);
-colororder(newcolors);
+colororder(acc_colormap);
 hold on
 plot(f/1e9,real(C_)/1e-15,'LineWidth',2);
 xlim([0 500]);
@@ -51,5 +51,15 @@ ylim([0 3.5]);
 grid on
 % legend('FDTD','Formula from Javadzadeh et al','Location','southeast')
 
+function map = acc_colormap()
+    map = [204 121 167
+    213 94 0;
+    0 114 178;
+    240 228 66;
+    0 158 115;
+    86 180 233;
+    230 159 0;
+    0 0 0;]./255;
+end
 
 

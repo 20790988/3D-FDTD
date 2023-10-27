@@ -9,21 +9,24 @@ DIELECTRIC = 3;
 SUPERCONDUCTOR = 4;
 
 %====================PLOT CONTROL====================%
-to_plot = [SUPERCONDUCTOR];
-plot_source = true;
+to_plot = [SUPERCONDUCTOR,DIELECTRIC];
+plot_source = false;
 
 units_axis = 1e-6;
 units_axis_str = 'um';
+
+grid_ = grid(:,1:80,:);
 %===================================================%
 
 
-s = size(grid);
+
+s = size(grid_);
 newgrid = zeros(s);
 
-newgrid(grid==0) = PEC;
-newgrid(grid==1) = AIR;
-newgrid(grid==2) = DIELECTRIC;
-newgrid(grid==3) = SUPERCONDUCTOR;
+newgrid(grid_==0) = PEC;
+newgrid(grid_==1) = AIR;
+newgrid(grid_==2) = DIELECTRIC;
+newgrid(grid_==3) = SUPERCONDUCTOR;
 
 temp = zeros([s(1)+2,s(2)+2, s(3)+2]);
 temp(2:(s(1)+1),2:(s(2)+1),2:(s(3)+1)) = newgrid;
@@ -31,7 +34,7 @@ newgrid = temp;
 
 material = [PEC,AIR,DIELECTRIC,SUPERCONDUCTOR];
 color = {[0.5 0.5 0.5], [0.1, 1 , 1], [0.2 1 0.2 ], [0 0 1]};
-figure(1);
+fig = figure(1);
 
 delta_x = param.delta{1};
 delta_y = param.delta{2};
@@ -111,6 +114,6 @@ xlabel(sprintf('y (%s)',units_axis_str));
 zlabel(sprintf('z (%s)',units_axis_str));
 
 title(sprintf('Mesh size = %sm',num2eng(delta_x,useSI=true)))
-grid on
+% grid(fig,'on');
 
 toc;
